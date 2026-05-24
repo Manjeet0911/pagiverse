@@ -1,0 +1,8 @@
+node_modules/
+frontend/node_modules/
+backend/pdf_companion.db
+backend/temp_uploads/
+backend/__pycache__/
+backend/app/__pycache__/
+.env
+backend/.env
