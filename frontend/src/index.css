@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/* Tailwind v4 ko batana ki hamare saare React components kahan hain */
+@source "../index.html";
+@source "./**/*.{js,ts,jsx,tsx}";
+
+body {
+  background-color: #f3f4f6; /* Soft professional gray background */
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+/* Flashcard 3D Flip Effects */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
