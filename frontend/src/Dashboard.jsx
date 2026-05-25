@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, Sparkles, Lightbulb, Bookmark, HelpCircle, Calendar, Quote } from 'lucide-react';
 
-// 🚀 NATIVE LIVE BACKEND PRODUCTION CLUSTER ENDPOINT INTERACTION
 const API_BASE_URL = "https://pagiverse.onrender.com";
 
 export default function Dashboard() {
@@ -20,15 +19,12 @@ export default function Dashboard() {
     formData.append("file", file);
 
     try {
-      // Configured safely to hit the live cloud network instead of localhost
       const response = await fetch(`${API_BASE_URL}/api/process-pdf`, {
         method: "POST",
         body: formData,
       });
       const result = await response.json();
       
-      // Render directly handles responses instantly, if background polling is required
-      // we check fallback keys or map response data directly.
       if (result && result.summary) {
         setData({
           summary: result.summary || "",
@@ -116,7 +112,6 @@ export default function Dashboard() {
     const elements = [];
     for (let i = 1; i < parts.length; i += 2) {
       const pageNum = parts[i];
-      // Fixed Python runtime specific .strip crash bug safely using native Javascript JS .trim
       const pageContent = parts[i + 1] ? parts[i + 1].trim() : "";
       const styleIndex = (parseInt(pageNum, 10) || 0) % badgeColors.length;
 
@@ -136,9 +131,9 @@ export default function Dashboard() {
   };
 
   return (
-    <div key={renderKey} className="min-h-screen bg-[#0b0f19] text-slate-100 font-sans selection:bg-emerald-500 selection:text-white">
+    <div key={renderKey} className="min-h-screen bg-[#0b0f19] text-slate-100 font-sans selection:bg-emerald-500 selection:text-white" style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
       
-      <nav className="border-b border-slate-800 bg-[#0f172a]/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex justify-between items-center">
+      <nav className="border-b border-slate-800 bg-[#0f172a]/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex justify-between items-center" style={{ width: '100%', boxSizing: 'border-box' }}>
         <div className="flex items-center gap-2.5">
           <div className="bg-gradient-to-tr from-emerald-400 to-teal-600 p-2 rounded-xl shadow-lg shadow-emerald-500/20">
             <Sparkles className="w-5 h-5 text-slate-900" />
@@ -149,21 +144,21 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      <div className={`p-4 md:p-8 max-w-[1600px] mx-auto grid gap-8 transition-all duration-500 ${data ? 'grid-cols-1 lg:grid-cols-4' : 'grid-cols-1'}`}>
+      <div className={`p-4 md:p-8 max-w-[1600px] mx-auto grid gap-8 transition-all duration-500 ${data ? 'grid-cols-1 lg:grid-cols-4' : 'grid-cols-1'}`} style={{ width: '100%', maxWidth: '1600px', boxSizing: 'border-box' }}>
         
-        <div className={`flex flex-col justify-center transition-all duration-500 ${data ? 'lg:col-span-1 lg:sticky lg:top-24 h-fit' : 'max-w-2xl mx-auto w-full my-12'}`}>
-          <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-2xl">
+        <div className={`flex flex-col justify-center transition-all duration-500 ${data ? 'lg:col-span-1 lg:sticky lg:top-24 h-fit' : 'max-w-2xl mx-auto w-full my-12'}`} style={{ width: '100%', boxSizing: 'border-box' }}>
+          <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-2xl" style={{ width: '100%', boxSizing: 'border-box' }}>
             <h2 className="text-lg font-semibold text-slate-200 mb-5 flex items-center gap-2">
               <FileText className="w-5 h-5 text-emerald-400" />
               {data ? "Upload Another File" : "Upload Study Material"}
             </h2>
-            <form onSubmit={handleUpload} className="space-y-4">
-              <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-emerald-500/50 rounded-xl p-6 cursor-pointer bg-[#0f172a]/50 w-full">
+            <form onSubmit={handleUpload} className="space-y-4" style={{ width: '100%' }}>
+              <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-emerald-500/50 rounded-xl p-6 cursor-pointer bg-[#0f172a]/50 w-full" style={{ boxSizing: 'border-box' }}>
                 <Upload className="w-8 h-8 text-slate-500 mb-2" />
-                <span className="text-sm text-slate-300 text-center max-w-[200px] truncate">{file ? file.name : "Choose PDF / Image"}</span>
+                <span className="text-sm text-slate-300 text-center max-w-[200px] truncate" style={{ width: '100%', display: 'block' }}>{file ? file.name : "Choose PDF / Image"}</span>
                 <input type="file" accept=".pdf,image/*" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
               </label>
-              <button type="submit" disabled={loading || !file} className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-900 font-bold py-3 rounded-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2">
+              <button type="submit" disabled={loading || !file} className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-900 font-bold py-3 rounded-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2" style={{ display: 'flex' }}>
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
                 ) : (
@@ -178,9 +173,9 @@ export default function Dashboard() {
         </div>
 
         {data && (
-          <div className="lg:col-span-3 space-y-8 animate-in fade-in duration-500">
+          <div className="lg:col-span-3 space-y-8 animate-in fade-in duration-500" style={{ width: '100%', boxSizing: 'border-box' }}>
             
-            <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-xl">
+            <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-xl" style={{ width: '100%', boxSizing: 'border-box' }}>
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2 border-b border-slate-800 pb-3">
                 <Bookmark className="w-5 h-5 text-blue-400" /> Executive Summary
               </h2>
@@ -188,7 +183,7 @@ export default function Dashboard() {
             </div>
 
             {data.timeline_dates && data.timeline_dates.length > 0 && (
-              <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-xl border-t-4 border-t-amber-500/40">
+              <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-xl border-t-4 border-t-amber-500/40" style={{ width: '100%', boxSizing: 'border-box' }}>
                 <h2 className="text-xl font-bold mb-5 flex items-center gap-2 border-b border-slate-800 pb-3 text-amber-400">
                   <Calendar className="w-5 h-5" /> Timeline & Key Dates
                 </h2>
@@ -203,7 +198,7 @@ export default function Dashboard() {
             )}
 
             {data.historians_quotes && data.historians_quotes.length > 0 && (
-              <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-xl border-t-4 border-t-indigo-500/40">
+              <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-xl border-t-4 border-t-indigo-500/40" style={{ width: '100%', boxSizing: 'border-box' }}>
                 <h2 className="text-xl font-bold mb-5 flex items-center gap-2 border-b border-slate-800 pb-3 text-indigo-400">
                   <Quote className="w-5 h-5" /> Historians, Acts & Statements
                 </h2>
@@ -218,7 +213,7 @@ export default function Dashboard() {
             )}
 
             {data.key_points && data.key_points.length > 0 && (
-              <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-xl border-t-4 border-t-emerald-500/40">
+              <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-xl border-t-4 border-t-emerald-500/40" style={{ width: '100%', boxSizing: 'border-box' }}>
                 <h2 className="text-xl font-bold mb-5 flex items-center gap-2 border-b border-slate-800 pb-3 text-emerald-400">
                   <Lightbulb className="w-5 h-5" /> High-Focus Key Points
                 </h2>
@@ -236,11 +231,11 @@ export default function Dashboard() {
             )}
 
             {data.flashcards && data.flashcards.length > 0 && (
-              <div>
+              <div style={{ width: '100%', boxSizing: 'border-box' }}>
                 <h2 className="text-xl font-bold mb-5 flex items-center gap-2 px-1">
                   <HelpCircle className="w-5 h-5 text-purple-400" /> Interactive Cards (Click to Flip)
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" style={{ width: '100%' }}>
                   {data.flashcards?.map((c, i) => (
                     <Flashcard key={`fc-${i}`} card={c} />
                   ))}
