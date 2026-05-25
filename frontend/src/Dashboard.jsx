@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, Sparkles, Lightbulb, Bookmark, HelpCircle, Calendar, Quote } from 'lucide-react';
+import { Upload, FileText, Sparkles, Lightbulb, Bookmark, HelpCircle, Calendar, Quote, Download, History } from 'lucide-react';
 
 const API_BASE_URL = "https://pagiverse.onrender.com";
 
@@ -8,6 +8,23 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState("Initializing injection network...");
   const [data, setData] = useState(null);
+  const [historyList, setHistoryList] = useState([]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  const fetchHistory = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/documents`);
+      if (response.ok) {
+        const docs = await response.json();
+        setHistoryList(docs || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -34,6 +51,7 @@ export default function Dashboard() {
       
       if (uploadResult && uploadResult.id) {
         pollAnalytics(uploadResult.id);
+        fetchHistory();
       } else {
         throw new Error("Invalid operational token response");
       }
@@ -94,6 +112,34 @@ export default function Dashboard() {
     setLoading(false);
   };
 
+  const loadHistoryItem = async (docId) => {
+    setLoading(true);
+    setData(null);
+    setLoadingStage("Loading archival snapshot parameters...");
+    try {
+      const dataResponse = await fetch(`${API_BASE_URL}/document/${docId}/analytics`);
+      if (dataResponse.ok) {
+        const finalPayload = await dataResponse.json();
+        setData({
+          summary: finalPayload.summary || "",
+          key_points: Array.isArray(finalPayload.key_points) ? finalPayload.key_points : [],
+          timeline_dates: Array.isArray(finalPayload.timeline_dates) ? finalPayload.timeline_dates : [],
+          historians_quotes: Array.isArray(finalPayload.historians_quotes) ? finalPayload.historians_quotes : [],
+          cheat_sheet: Array.isArray(finalPayload.cheat_sheet) ? finalPayload.cheat_sheet : [],
+          flashcards: Array.isArray(finalPayload.flashcards) ? finalPayload.flashcards : []
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadPDFReport = () => {
+    window.print();
+  };
+
   const highlightStyles = [
     "border-l-4 border-blue-500 bg-blue-500/10 text-blue-200",
     "border-l-4 border-emerald-500 bg-emerald-500/10 text-emerald-200",
@@ -136,7 +182,6 @@ export default function Dashboard() {
     }
     return <div style={{ marginTop: '1rem' }}>{elements}</div>;
   };
-
   return (
     <div className="min-h-screen bg-[#0b0f19] text-slate-100 font-sans" style={{ minHeight: '100vh', width: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', backgroundColor: '#0b0f19', color: '#f8fafc', margin: 0, padding: 0 }}>
       
@@ -149,39 +194,64 @@ export default function Dashboard() {
             Pagiverse <span style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: '600', backgroundColor: 'rgba(52, 211, 153, 0.1)', padding: '0.125rem 0.5rem', borderRadius: '9999px', marginLeft: '0.25rem' }}>Beta</span>
           </span>
         </div>
+        {data && (
+          <button onClick={downloadPDFReport} className="flex items-center gap-2 border border-slate-700 bg-[#111827] hover:bg-slate-800 px-4 py-2 rounded-xl text-sm font-medium text-slate-200 transition-all active:scale-[0.98]" style={{ border: '1px solid #334155', backgroundColor: '#111827', padding: '0.5rem 1rem', borderRadius: '12px', fontSize: '0.875rem', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <Download style={{ width: '16px', height: '16px', color: '#34d399' }} />
+            <span>Download PDF Report</span>
+          </button>
+        )}
       </nav>
 
-      <div style={{ width: '100%', maxWidth: '1400px', margin: '0 auto', padding: '2rem 1.5rem', boxSizing: 'border-box', flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ width: '100%', maxWidth: '1600px', margin: '0 auto', padding: '2rem 1.5rem', boxSizing: 'border-box', flexGrow: 1, display: 'grid', gridTemplateColumns: data ? '1fr 3fr' : '1fr', gap: '2rem', alignItems: 'start' }}>
         
-        <div style={{ width: '100%', maxWidth: '640px', backgroundColor: '#111827', border: '1px solid #1e293b', borderRadius: '16px', padding: '1.5rem', boxSizing: 'border-box', marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#e2e8f0', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <FileText style={{ width: '20px', height: '20px', color: '#34d399' }} />
-            {data ? "Upload Another File" : "Upload Study Material"}
-          </h2>
-          <form onSubmit={handleUpload} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #1e293b', borderRadius: '12px', padding: '2rem', cursor: 'pointer', backgroundColor: 'rgba(15, 23, 42, 0.5)', width: '100%', boxSizing: 'border-box' }}>
-              <Upload style={{ width: '32px', height: '32px', color: '#64748b', marginBottom: '0.5rem' }} />
-              <span style={{ fontSize: '0.875rem', color: '#cbd5e1', textAlign: 'center', maxWidth: '100%', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file ? file.name : "Choose PDF / Image"}</span>
-              <input type="file" accept=".pdf,image/*" style={{ display: 'none' }} onChange={(e) => setFile(e.target.files[0])} />
-            </label>
-            <button type="submit" disabled={loading || !file} style={{ width: '100%', background: 'linear-gradient(to right, #10b981, #0d9488)', color: '#0f172a', fontWeight: '700', padding: '0.75rem', borderRadius: '12px', border: 'none', cursor: (loading || !file) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: (loading || !file) ? 0.6 : 1 }}>
-              {loading ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ width: '16px', height: '16px', border: '2px solid #0f172a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                  <span style={{ fontSize: '0.85rem' }}>{loadingStage}</span>
-                </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
+          <div style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderRadius: '16px', padding: '1.5rem', boxSizing: 'border-box' }}>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#e2e8f0', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <FileText style={{ width: '20px', height: '20px', color: '#34d399' }} />
+              {data ? "Upload Another File" : "Upload Study Material"}
+            </h2>
+            <form onSubmit={handleUpload} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #1e293b', borderRadius: '12px', padding: '2rem', cursor: 'pointer', backgroundColor: 'rgba(15, 23, 42, 0.5)', width: '100%', boxSizing: 'border-box' }}>
+                <Upload style={{ width: '32px', height: '32px', color: '#64748b', marginBottom: '0.5rem' }} />
+                <span style={{ fontSize: '0.875rem', color: '#cbd5e1', textAlign: 'center', maxWidth: '100%', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file ? file.name : "Choose PDF / Image"}</span>
+                <input type="file" accept=".pdf,image/*" style={{ display: 'none' }} onChange={(e) => setFile(e.target.files[0])} />
+              </label>
+              <button type="submit" disabled={loading || !file} style={{ width: '100%', background: 'linear-gradient(to right, #10b981, #0d9488)', color: '#0f172a', fontWeight: '700', padding: '0.75rem', borderRadius: '12px', border: 'none', cursor: (loading || !file) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: (loading || !file) ? 0.6 : 1 }}>
+                {loading ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: '16px', height: '16px', border: '2px solid #0f172a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                    <span style={{ fontSize: '0.85rem' }}>{loadingStage}</span>
+                  </div>
+                ) : (
+                  <>
+                    <Sparkles style={{ width: '16px', height: '16px' }} />
+                    <span>Generate Magic ✨</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+
+          <div style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderRadius: '16px', padding: '1.5rem', boxSizing: 'border-box' }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <History style={{ width: '16px', height: '16px' }} /> Recent Document Ledger
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '240px', overflowY: 'auto' }}>
+              {historyList.length === 0 ? (
+                <p style={{ fontSize: '0.75rem', color: '#475569', fontStyle: 'italic' }}>No historical records ingested yet.</p>
               ) : (
-                <>
-                  <Sparkles style={{ width: '16px', height: '16px' }} />
-                  <span>Generate Magic ✨</span>
-                </>
+                historyList.map((item) => (
+                  <button key={item.id} onClick={() => loadHistoryItem(item.id)} style={{ width: '100%', textAlign: 'left', padding: '0.625rem', borderRadius: '12px', backgroundColor: 'rgba(15, 23, 42, 0.5)', border: '1px solid #1e293b', color: '#cbd5e1', fontSize: '0.75rem', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                    📄 {item.filename}
+                  </button>
+                ))
               )}
-            </button>
-          </form>
+            </div>
+          </div>
         </div>
 
         {data && (
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
             <div style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderRadius: '16px', padding: '1.5rem' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #1e293b', paddingBottom: '0.75rem' }}>
                 <Bookmark style={{ width: '20px', height: '20px', color: '#3b82f6' }} /> Executive Summary
@@ -244,7 +314,7 @@ export default function Dashboard() {
                 </h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem', width: '100%' }}>
                   {data.flashcards.map((c, i) => (
-                    <Flashcard key={`fc-${i}`} card={c} />
+                    <Flashcard key={`fc-${i}`} card={c} index={i} />
                   ))}
                 </div>
               </div>
@@ -259,8 +329,19 @@ export default function Dashboard() {
   );
 }
 
-function Flashcard({ card }) {
+function Flashcard({ card, index }) {
   const [flipped, setFlipped] = useState(false);
+  
+  const backColors = [
+    "bg-[#13233c] border-blue-500/30 text-blue-100",
+    "bg-[#112620] border-emerald-500/30 text-emerald-100",
+    "bg-[#222017] border-amber-500/30 text-amber-100",
+    "bg-[#1c192b] border-purple-500/30 text-purple-100",
+    "bg-[#24181f] border-rose-500/30 text-rose-100"
+  ];
+  
+  const selectedBackColor = backColors[index % backColors.length] || backColors[0];
+
   return (
     <div style={{ height: '12rem', cursor: 'pointer', perspective: '1000px' }} onClick={() => setFlipped(!flipped)}>
       <div style={{ position: 'relative', width: '100%', height: '100%', transformStyle: 'preserve-3d', transition: 'transform 0.5s', transform: flipped ? 'rotateY(180deg)' : 'none' }}>
@@ -271,12 +352,12 @@ function Flashcard({ card }) {
           </div>
           <span style={{ fontSize: '11px', color: '#64748b', textAlign: 'right' }}>Click to flip 👁️</span>
         </div>
-        <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', backgroundColor: '#131c2e', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '1.25rem', borderRadius: '16px', backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div className={selectedBackColor} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: '1px solid', padding: '1.25rem', borderRadius: '16px', backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
-            <span style={{ fontSize: '10px', color: '#34d399', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Answer</span>
-            <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', fontWeight: '500', color: '#ecfdf5', lineHeight: '1.6', overflowY: 'auto', maxHeight: '7rem' }}>{card.answer}</p>
+            <span style={{ fontSize: '10px', opacity: 0.8, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Answer</span>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', fontWeight: '500', lineHeight: '1.6', overflowY: 'auto', maxHeight: '7rem' }}>{card.answer}</p>
           </div>
-          <span style={{ fontSize: '11px', color: 'rgba(52, 211, 153, 0.5)', textAlign: 'right' }}>Click to hide ↩</span>
+          <span style={{ fontSize: '11px', opacity: 0.6, textAlign: 'right' }}>Click to hide ↩</span>
         </div>
       </div>
     </div>
