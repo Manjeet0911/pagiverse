@@ -21,3 +21,28 @@ body {
   min-height: 100vh;
   background: radial-gradient(circle at top right, #1e1b4b 0%, #0f172a 100%) !important;
 }
+
+.max-w-\[1600px\] {
+  max-width: 1600px !important;
+  width: 100% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.grid {
+  display: grid !important;
+  width: 100% !important;
+}
+
+.w-full {
+  width: 100% !important;
+}
+
+@media (min-width: 1024px) {
+  .lg\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+  .lg\:col-span-3 {
+    grid-column: span 3 / span 3 !important;
+  }
+}
