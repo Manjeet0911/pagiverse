@@ -6,6 +6,8 @@ import {
   Download, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 
+// 🚨 NOTE: Removed import './App.css'; to prevent old dark mode from overriding the new light theme!
+
 // 🚀 PRODUCTION LIVE BACKEND CLUSTER ENDPOINT
 const API_BASE_URL = "https://pagiverse.onrender.com";
 
@@ -360,12 +362,14 @@ function App() {
         );
       } else if (paragraph.trim() !== '') {
         renderedBlocks.push(
-          <p
+          <div
             key={`p-${idx}`}
-            className="text-slate-950 font-black text-base md:text-lg leading-relaxed whitespace-pre-line border-l-4 border-emerald-500 pl-4 py-1.5 mb-4 tracking-wide"
+            className="bg-emerald-50/40 p-5 rounded-2xl shadow-sm mb-4 border-l-4 border-emerald-500 border border-slate-100"
           >
-            {paragraph}
-          </p>
+            <p className="text-slate-950 font-black text-base md:text-lg leading-relaxed whitespace-pre-line tracking-wide">
+              {paragraph}
+            </p>
+          </div>
         );
       }
     });
