@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, FileText, Sparkles, Lightbulb, Bookmark, HelpCircle, Calendar, Quote } from 'lucide-react';
 
 const API_BASE_URL = "https://pagiverse.onrender.com";
@@ -6,6 +6,7 @@ const API_BASE_URL = "https://pagiverse.onrender.com";
 export default function Dashboard() {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingStage, setLoadingStage] = useState("Initializing injection network...");
   const [data, setData] = useState(null);
 
   const handleUpload = async (e) => {
@@ -14,37 +15,83 @@ export default function Dashboard() {
     
     setLoading(true);
     setData(null); 
+    setLoadingStage("Streaming raw binary buffers to cloud...");
+    
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/process-pdf`, {
+      const response = await fetch(`${API_BASE_URL}/upload`, {
         method: "POST",
         body: formData,
       });
       
       if (!response.ok) {
-        throw new Error("Server container integration failure");
+        throw new Error("Server transmission error");
       }
       
-      const result = await response.json();
+      const uploadResult = await response.json();
       
-      if (result && result.summary) {
-        setData({
-          summary: result.summary || "",
-          key_points: Array.isArray(result.key_points) ? result.key_points : [],
-          timeline_dates: Array.isArray(result.timeline_dates) ? result.timeline_dates : [],
-          historians_quotes: Array.isArray(result.historians_quotes) ? result.historians_quotes : [],
-          cheat_sheet: Array.isArray(result.cheat_sheet) ? result.cheat_sheet : [],
-          flashcards: Array.isArray(result.flashcards) ? result.flashcards : []
-        });
+      if (uploadResult && uploadResult.id) {
+        pollAnalytics(uploadResult.id);
+      } else {
+        throw new Error("Invalid operational token response");
       }
     } catch (error) {
-      console.error("Execution Exception:", error);
-      alert("Render backend container response timeout. Please try uploading again in a few seconds.");
-    } finally {
+      console.error("Exception loop:", error);
+      alert("Render backend response timeout. The container might be warming up. Please click upload again.");
       setLoading(false);
     }
+  };
+
+  const pollAnalytics = async (docId) => {
+    let completed = false;
+    let attempts = 0;
+    
+    const stages = [
+      "Isolating text streams from individual document blocks...",
+      "Executing context ingestion into core Gemini pipeline...",
+      "Generating deep insights matrix and sorting chronological timelines...",
+      "Formatting dynamic JSON structures to construct flashcards...",
+      "Finalizing database synchronization anchors..."
+    ];
+
+    while (!completed && attempts < 30) {
+      try {
+        setLoadingStage(stages[attempts % stages.length]);
+        await new Promise(r => setTimeout(r, 4000));
+        
+        const statusCheck = await fetch(`${API_BASE_URL}/document/${docId}`);
+        if (!statusCheck.ok) continue;
+        
+        const docStatus = await statusCheck.json();
+        
+        if (docStatus.status === "completed") {
+          setLoadingStage("Parsing structural layout payload...");
+          const dataResponse = await fetch(`${API_BASE_URL}/document/${docId}/analytics`);
+          const finalPayload = await dataResponse.json();
+          
+          if (finalPayload) {
+            setData({
+              summary: finalPayload.summary || "",
+              key_points: Array.isArray(finalPayload.key_points) ? finalPayload.key_points : [],
+              timeline_dates: Array.isArray(finalPayload.timeline_dates) ? finalPayload.timeline_dates : [],
+              historians_quotes: Array.isArray(finalPayload.historians_quotes) ? finalPayload.historians_quotes : [],
+              cheat_sheet: Array.isArray(finalPayload.cheat_sheet) ? finalPayload.cheat_sheet : [],
+              flashcards: Array.isArray(finalPayload.flashcards) ? finalPayload.flashcards : []
+            });
+          }
+          completed = true;
+        } else if (docStatus.status === "failed") {
+          alert("Document engine worker encountered an evaluation error during single-shot parsing.");
+          completed = true;
+        }
+      } catch (error) {
+        console.error("Polling interval exception:", error);
+      }
+      attempts++;
+    }
+    setLoading(false);
   };
 
   const highlightStyles = [
@@ -119,7 +166,10 @@ export default function Dashboard() {
             </label>
             <button type="submit" disabled={loading || !file} style={{ width: '100%', background: 'linear-gradient(to right, #10b981, #0d9488)', color: '#0f172a', fontWeight: '700', padding: '0.75rem', borderRadius: '12px', border: 'none', cursor: (loading || !file) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: (loading || !file) ? 0.6 : 1 }}>
               {loading ? (
-                <div style={{ width: '20px', height: '20px', border: '2px solid #0f172a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ width: '16px', height: '16px', border: '2px solid #0f172a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                  <span style={{ fontSize: '0.85rem' }}>{loadingStage}</span>
+                </div>
               ) : (
                 <>
                   <Sparkles style={{ width: '16px', height: '16px' }} />
@@ -213,7 +263,7 @@ function Flashcard({ card }) {
   const [flipped, setFlipped] = useState(false);
   return (
     <div style={{ height: '12rem', cursor: 'pointer', perspective: '1000px' }} onClick={() => setFlipped(!flipped)}>
-      <div style={{ position: 'relative', width: '100%', height: '100%', duration: '0.5s', transformStyle: 'preserve-3d', transition: 'transform 0.5s', transform: flipped ? 'rotateY(180deg)' : 'none' }}>
+      <div style={{ position: 'relative', width: '100%', height: '100%', transformStyle: 'preserve-3d', transition: 'transform 0.5s', transform: flipped ? 'rotateY(180deg)' : 'none' }}>
         <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', backgroundColor: '#111827', border: '1px solid #1e293b', padding: '1.25rem', borderRadius: '16px', backfaceVisibility: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
             <span style={{ fontSize: '10px', color: '#c084fc', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Question</span>
