@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Upload, FileText, Sparkles, Lightbulb, Bookmark,
   HelpCircle, Calendar, Quote, Download, History,
-  PanelLeftClose, PanelLeftOpen
+  PanelLeftClose, PanelLeftOpen, Trash2, X
 } from 'lucide-react';
 
 const API_BASE_URL = "https://pagiverse.onrender.com";
@@ -16,17 +16,12 @@ export default function Dashboard() {
   const [renderKey, setRenderKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  useEffect(() => { fetchHistory(); }, []);
-
-  const fetchHistory = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/user/documents`);
-      if (response.ok) {
-        const docs = await response.json();
-        setHistoryList(docs || []);
-      }
-    } catch (err) { console.error(err); }
-  };
+  useEffect(() => {
+    const localHistory = localStorage.getItem('pagiverse_history');
+    if (localHistory) {
+      setHistoryList(JSON.parse(localHistory));
+    }
+  }, []);
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -40,8 +35,7 @@ export default function Dashboard() {
       const response = await fetch(`${API_BASE_URL}/upload`, { method: "POST", body: formData });
       const result = await response.json();
       if (result && result.id) {
-        pollAnalytics(result.id);
-        fetchHistory();
+        pollAnalytics(result.id, file.name);
       } else {
         alert("Backend sync failed. Please try again.");
         setLoading(false);
@@ -53,7 +47,7 @@ export default function Dashboard() {
     }
   };
 
-  const pollAnalytics = async (docId) => {
+  const pollAnalytics = async (docId, fileName) => {
     let completed = false;
     let attempts = 0;
     const stages = [
@@ -73,14 +67,24 @@ export default function Dashboard() {
           const response = await fetch(`${API_BASE_URL}/document/${docId}/analytics`);
           const result = await response.json();
           if (result) {
-            setData({
+            const newAnalytics = {
               summary: result.summary || "",
               key_points: Array.isArray(result.key_points) ? result.key_points : [],
               timeline_dates: Array.isArray(result.timeline_dates) ? result.timeline_dates : [],
               historians_quotes: Array.isArray(result.historians_quotes) ? result.historians_quotes : [],
               cheat_sheet: Array.isArray(result.cheat_sheet) ? result.cheat_sheet : [],
               flashcards: Array.isArray(result.flashcards) ? result.flashcards : []
-            });
+            };
+            setData(newAnalytics);
+            
+            const newHistoryItem = {
+              id: docId,
+              filename: fileName,
+              analytics: newAnalytics
+            };
+            const updatedHistory = [newHistoryItem, ...historyList.filter(item => item.id !== docId)];
+            setHistoryList(updatedHistory);
+            localStorage.setItem('pagiverse_history', JSON.stringify(updatedHistory));
           }
           setRenderKey(prev => prev + 1);
           completed = true;
@@ -94,26 +98,33 @@ export default function Dashboard() {
     setLoading(false);
   };
 
-  const loadHistoryItem = async (docId) => {
+  const loadHistoryItem = (item) => {
     setLoading(true);
     setData(null);
     setLoadingStage("Loading archival snapshot...");
-    try {
-      const dataResponse = await fetch(`${API_BASE_URL}/document/${docId}/analytics`);
-      if (dataResponse.ok) {
-        const result = await dataResponse.json();
-        setData({
-          summary: result.summary || "",
-          key_points: Array.isArray(result.key_points) ? result.key_points : [],
-          timeline_dates: Array.isArray(result.timeline_dates) ? result.timeline_dates : [],
-          historians_quotes: Array.isArray(result.historians_quotes) ? result.historians_quotes : [],
-          cheat_sheet: Array.isArray(result.cheat_sheet) ? result.cheat_sheet : [],
-          flashcards: Array.isArray(result.flashcards) ? result.flashcards : []
-        });
-        setRenderKey(prev => prev + 1);
-      }
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+    setTimeout(() => {
+      setData(item.analytics);
+      setRenderKey(prev => prev + 1);
+      setLoading(false);
+    }, 500);
+  };
+
+  const deleteHistoryItem = (id, e) => {
+    e.stopPropagation();
+    const updatedHistory = historyList.filter(item => item.id !== id);
+    setHistoryList(updatedHistory);
+    localStorage.setItem('pagiverse_history', JSON.stringify(updatedHistory));
+    if (data && historyList.find(item => item.id === id)?.analytics === data) {
+      setData(null);
+    }
+  };
+
+  const clearAllHistory = () => {
+    if (window.confirm("Kya aap sach me saari history delete karna chahte hain?")) {
+      setHistoryList([]);
+      localStorage.removeItem('pagiverse_history');
+      setData(null);
+    }
   };
 
   const downloadPDFReport = () => { window.print(); };
@@ -159,10 +170,10 @@ export default function Dashboard() {
     }
     return <div className="space-y-6 mt-3">{elements}</div>;
   };
+
   return (
     <div key={renderKey} className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-emerald-200">
 
-      {/* Premium Navbar */}
       <nav className="sticky top-0 z-50 px-6 py-4 flex justify-between items-center bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm no-print">
         <div className="flex items-center gap-3">
           {data && (
@@ -192,127 +203,133 @@ export default function Dashboard() {
         )}
       </nav>
 
-      <div className={`p-4 md:p-8 max-w-[1600px] mx-auto grid gap-8 transition-all duration-500 ${data ? 'grid-cols-1 lg:grid-cols-4' : 'grid-cols-1'}`}>
+      <div className={`p-4 md:p-8 max-w-[1600px] mx-auto grid gap-8 transition-all duration-500 ${data && sidebarOpen ? 'grid-cols-1 lg:grid-cols-4' : 'grid-cols-1'}`}>
 
-        {/* Left Sidebar — hidden from print */}
-        <div
-          className={`no-print flex flex-col gap-6 transition-all duration-500 ease-in-out
-            ${data ? 'lg:col-span-1 lg:sticky lg:top-24 h-fit' : 'max-w-2xl mx-auto w-full my-12'}
-            ${data && !sidebarOpen ? 'sidebar-hidden' : 'sidebar-visible'}
-          `}
-        >
-          {/* Upload Card */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-7 shadow-xl shadow-slate-200/50">
-            <h2 className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-emerald-500" />
-              {data ? "Upload Another File" : "Upload Study Material"}
-            </h2>
-            <form onSubmit={handleUpload} className="space-y-5">
-              <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/50 rounded-2xl p-8 cursor-pointer bg-slate-50 transition-all">
-                <Upload className="w-8 h-8 text-slate-400 mb-3" />
-                <span className="text-sm font-medium text-slate-600 text-center max-w-[200px] truncate">
-                  {file ? file.name : "Choose PDF / Image"}
-                </span>
-                <input type="file" accept=".pdf,image/*" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
-              </label>
-              <button
-                type="submit"
-                disabled={loading || !file}
-                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-sm">{loadingStage}</span>
-                  </div>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>Generate Magic</span>
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
+        {sidebarOpen && (
+          <div className="no-print flex flex-col gap-6 lg:col-span-1">
+            <div className="bg-white border border-slate-200 rounded-3xl p-7 shadow-xl shadow-slate-200/50">
+              <h2 className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-emerald-500" />
+                {data ? "Upload Another File" : "Upload Study Material"}
+              </h2>
+              <form onSubmit={handleUpload} className="space-y-5">
+                <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/50 rounded-2xl p-8 cursor-pointer bg-slate-50 transition-all">
+                  <Upload className="w-8 h-8 text-slate-400 mb-3" />
+                  <span className="text-sm font-medium text-slate-600 text-center max-w-[200px] truncate">
+                    {file ? file.name : "Choose PDF / Image"}
+                  </span>
+                  <input type="file" accept=".pdf,image/*" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
+                </label>
+                <button
+                  type="submit"
+                  disabled={loading || !file}
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-sm">{loadingStage}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span>Generate Magic</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
 
-          {/* History Panel */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl shadow-slate-200/50">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <History className="w-4 h-4" /> History
-            </h3>
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-2 no-scrollbar">
-              {historyList.length === 0 ? (
-                <p className="text-sm text-slate-500">No documents yet.</p>
-              ) : (
-                historyList.map((item) => (
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl shadow-slate-200/50">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <History className="w-4 h-4" /> History
+                </h3>
+                {historyList.length > 0 && (
                   <button
-                    key={item.id}
-                    onClick={() => loadHistoryItem(item.id)}
-                    className="w-full text-left p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 transition-colors text-sm font-semibold text-slate-700 truncate"
+                    onClick={clearAllHistory}
+                    className="text-xs text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-rose-50"
                   >
-                    📄 {item.filename}
+                    <Trash2 className="w-3.5 h-3.5" /> Clear All
                   </button>
-                ))
-              )}
+                )}
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2 no-scrollbar">
+                {historyList.length === 0 ? (
+                  <p className="text-sm text-slate-500">No documents yet.</p>
+                ) : (
+                  historyList.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => loadHistoryItem(item)}
+                      className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 transition-colors cursor-pointer group"
+                    >
+                      <span className="text-sm font-semibold text-slate-700 truncate max-w-[80%]">
+                        📄 {item.filename}
+                      </span>
+                      <button
+                        onClick={(e) => deleteHistoryItem(item.id, e)}
+                        className="p-1 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-white transition-all opacity-0 group-hover:opacity-100"
+                        title="Delete this item"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Main Content */}
         {data && (
-          <div className={`space-y-8 animate-in fade-in duration-700 slide-in-from-bottom-4 transition-all print-full-width
-            ${sidebarOpen ? 'lg:col-span-3' : 'lg:col-span-4'}
-          `}>
+          <div className={`space-y-8 animate-in fade-in duration-700 slide-in-from-bottom-4 transition-all print:w-full ${sidebarOpen ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
 
-            {/* Executive Summary */}
-            <div className="bg-white border border-slate-200 border-t-4 border-t-blue-400 rounded-3xl p-8 shadow-xl shadow-slate-200/50">
+            <div className="bg-white border border-slate-200 border-t-4 border-t-blue-400 rounded-3xl p-8 shadow-xl shadow-slate-200/50 print:shadow-none print:border-none">
               <h2 className="text-2xl font-extrabold mb-6 flex items-center gap-3 border-b border-slate-100 pb-4">
-                <span className="p-2 rounded-xl bg-blue-50 text-blue-500"><Bookmark className="w-5 h-5" /></span>
+                <span className="p-2 rounded-xl bg-blue-50 text-blue-500 print:bg-transparent"><Bookmark className="w-5 h-5" /></span>
                 <span className="text-blue-700">Executive Summary</span>
               </h2>
               {renderPageSummaries(data.summary)}
             </div>
 
-            {/* Timeline */}
             {data.timeline_dates?.length > 0 && (
-              <div className="bg-white border border-slate-200 border-t-4 border-t-amber-400 rounded-3xl p-8 shadow-xl shadow-slate-200/50">
+              <div className="bg-white border border-slate-200 border-t-4 border-t-amber-400 rounded-3xl p-8 shadow-xl shadow-slate-200/50 print:shadow-none print:border-none">
                 <h2 className="text-2xl font-extrabold mb-6 flex items-center gap-3 border-b border-slate-100 pb-4">
-                  <span className="p-2 rounded-xl bg-amber-50 text-amber-500"><Calendar className="w-5 h-5" /></span>
+                  <span className="p-2 rounded-xl bg-amber-50 text-amber-500 print:bg-transparent"><Calendar className="w-5 h-5" /></span>
                   <span className="text-amber-600">Timeline & Key Dates</span>
                 </h2>
                 <div className="space-y-3">
                   {data.timeline_dates.map((p, i) => (
-                    <div key={`td-${i}`} className="p-4 rounded-xl text-sm md:text-base font-semibold border-l-4 border-amber-400 bg-amber-50 text-amber-900">{p}</div>
+                    <div key={`td-${i}`} className="p-4 rounded-xl text-sm md:text-base font-semibold border-l-4 border-amber-400 bg-amber-50 text-amber-900 print:bg-slate-50">{p}</div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Historians & Quotes */}
             {data.historians_quotes?.length > 0 && (
-              <div className="bg-white border border-slate-200 border-t-4 border-t-indigo-400 rounded-3xl p-8 shadow-xl shadow-slate-200/50">
+              <div className="bg-white border border-slate-200 border-t-4 border-t-indigo-400 rounded-3xl p-8 shadow-xl shadow-slate-200/50 print:shadow-none print:border-none">
                 <h2 className="text-2xl font-extrabold mb-6 flex items-center gap-3 border-b border-slate-100 pb-4">
-                  <span className="p-2 rounded-xl bg-indigo-50 text-indigo-500"><Quote className="w-5 h-5" /></span>
+                  <span className="p-2 rounded-xl bg-indigo-50 text-indigo-500 print:bg-transparent"><Quote className="w-5 h-5" /></span>
                   <span className="text-indigo-600">Historians, Acts & Statements</span>
                 </h2>
                 <div className="space-y-3">
                   {data.historians_quotes.map((p, i) => (
-                    <div key={`hq-${i}`} className="p-4 rounded-xl text-sm md:text-base font-semibold border-l-4 border-indigo-400 bg-indigo-50 text-indigo-900">{p}</div>
+                    <div key={`hq-${i}`} className="p-4 rounded-xl text-sm md:text-base font-semibold border-l-4 border-indigo-400 bg-indigo-50 text-indigo-900 print:bg-slate-50">{p}</div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Key Points */}
             {data.key_points?.length > 0 && (
-              <div className="bg-white border border-slate-200 border-t-4 border-t-emerald-500 rounded-3xl p-8 shadow-xl shadow-slate-200/50">
+              <div className="bg-white border border-slate-200 border-t-4 border-t-emerald-500 rounded-3xl p-8 shadow-xl shadow-slate-200/50 print:shadow-none print:border-none">
                 <h2 className="text-2xl font-extrabold mb-6 flex items-center gap-3 border-b border-slate-100 pb-4">
-                  <span className="p-2 rounded-xl bg-emerald-50 text-emerald-500"><Lightbulb className="w-5 h-5" /></span>
+                  <span className="p-2 rounded-xl bg-emerald-50 text-emerald-500 print:bg-transparent"><Lightbulb className="w-5 h-5" /></span>
                   <span className="text-emerald-700">High-Focus Key Points</span>
                 </h2>
                 <div className="space-y-4">
                   {data.key_points.map((p, i) => (
-                    <div key={`kp-${i}`} className={`p-4 rounded-2xl text-sm md:text-base font-semibold transition-all duration-300 hover:scale-[1.01] ${highlightStyles[i % highlightStyles.length]}`}>
+                    <div key={`kp-${i}`} className={`p-4 rounded-2xl text-sm md:text-base font-semibold transition-all duration-300 hover:scale-[1.01] ${highlightStyles[i % highlightStyles.length]} print:bg-slate-50 print:text-slate-800`}>
                       <div className="flex gap-4">
                         <span className="font-black opacity-60">{String(i + 1).padStart(2, '0')}.</span>
                         <span>{p}</span>
@@ -323,14 +340,13 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Flashcards */}
             {data.flashcards?.length > 0 && (
-              <div>
-                <h2 className="text-2xl font-extrabold mb-6 flex items-center gap-3 ml-2 text-slate-800">
-                  <span className="p-2 rounded-xl bg-purple-50 text-purple-500"><HelpCircle className="w-5 h-5" /></span>
+              <div className="print:break-before-page">
+                <h2 className="text-2xl font-extrabold mb-6 flex items-center gap-3 ml-2 text-slate-800 print:mb-4">
+                  <span className="p-2 rounded-xl bg-purple-50 text-purple-500 print:bg-transparent"><HelpCircle className="w-5 h-5" /></span>
                   Interactive Flashcards
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 print:grid-cols-2">
                   {data.flashcards.map((c, i) => (
                     <Flashcard key={`fc-${i}`} card={c} index={i} />
                   ))}
@@ -358,25 +374,23 @@ function Flashcard({ card, index }) {
   const colorClass = backColors[index % backColors.length];
 
   return (
-    <div className="h-56 cursor-pointer [perspective:1000px] group" onClick={() => setFlipped(!flipped)}>
-      <div className={`relative w-full h-full transition-transform duration-500 ease-in-out [transform-style:preserve-3d] ${flipped ? '[transform:rotateY(180deg)]' : '[transform:rotateY(0deg)]'}`}>
+    <div className="h-56 cursor-pointer [perspective:1000px] group print:break-inside-avoid print:h-auto print:mb-4" onClick={() => setFlipped(!flipped)}>
+      <div className={`relative w-full h-full transition-transform duration-500 ease-in-out [transform-style:preserve-3d] ${flipped ? '[transform:rotateY(180deg)]' : '[transform:rotateY(0deg)]'} print:[transform:none]`}>
 
-        {/* Front */}
-        <div className="absolute inset-0 w-full h-full bg-white border border-slate-200 p-6 rounded-3xl [backface-visibility:hidden] flex flex-col justify-between shadow-xl shadow-slate-200/50 hover:border-blue-300 transition-colors">
+        <div className="absolute inset-0 w-full h-full bg-white border border-slate-200 p-6 rounded-3xl [backface-visibility:hidden] flex flex-col justify-between shadow-xl shadow-slate-200/50 hover:border-blue-300 transition-colors print:relative print:backface-visible print:shadow-none print:rounded-xl print:border-slate-300 print:mb-2">
           <div>
-            <span className="text-xs text-blue-600 font-black uppercase tracking-widest">Question</span>
-            <p className="mt-3 text-base font-bold text-slate-700 leading-snug">{card.question}</p>
+            <span className="text-xs text-blue-600 font-black uppercase tracking-widest print:text-slate-500">Question</span>
+            <p className="mt-3 text-base font-bold text-slate-700 leading-snug print:text-sm">{card.question}</p>
           </div>
-          <span className="text-xs text-slate-400 font-semibold text-right group-hover:text-blue-500 transition-colors">Click to flip ↩</span>
+          <span className="text-xs text-slate-400 font-semibold text-right group-hover:text-blue-500 transition-colors print:hidden">Click to flip ↩</span>
         </div>
 
-        {/* Back */}
-        <div className={`absolute inset-0 w-full h-full ${colorClass} p-6 rounded-3xl [backface-visibility:hidden] [transform:rotateY(180deg)] flex flex-col justify-between shadow-xl text-white`}>
+        <div className={`absolute inset-0 w-full h-full ${colorClass} p-6 rounded-3xl [backface-visibility:hidden] [transform:rotateY(180deg)] flex flex-col justify-between shadow-xl text-white print:relative print:backface-visible print:[transform:none] print:bg-none print:text-slate-800 print:p-4 print:pt-0 print:shadow-none print:border-b print:border-slate-200 print:rounded-none`}>
           <div>
-            <span className="text-xs font-black uppercase tracking-widest text-white/80">Answer</span>
-            <p className="mt-3 text-sm font-semibold leading-relaxed overflow-y-auto max-h-32 no-scrollbar">{card.answer}</p>
+            <span className="text-xs font-black uppercase tracking-widest text-white/80 print:text-emerald-600">Answer</span>
+            <p className="mt-3 text-sm font-semibold leading-relaxed overflow-y-auto max-h-32 no-scrollbar print:max-h-none print:text-xs print:mt-1">{card.answer}</p>
           </div>
-          <span className="text-xs text-white/60 font-semibold text-right">Click to hide ↩</span>
+          <span className="text-xs text-white/60 font-semibold text-right print:hidden">Click to hide ↩</span>
         </div>
 
       </div>
