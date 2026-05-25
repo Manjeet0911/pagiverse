@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { Upload, FileText, Sparkles, Lightbulb, Bookmark, HelpCircle, Calendar, Quote } from 'lucide-react';
 
 const API_BASE_URL = "https://pagiverse.onrender.com";
@@ -7,7 +7,6 @@ export default function Dashboard() {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
-  const [renderKey, setRenderKey] = useState(0);
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -23,6 +22,11 @@ export default function Dashboard() {
         method: "POST",
         body: formData,
       });
+      
+      if (!response.ok) {
+        throw new Error("Server container integration failure");
+      }
+      
       const result = await response.json();
       
       if (result && result.summary) {
@@ -34,55 +38,13 @@ export default function Dashboard() {
           cheat_sheet: Array.isArray(result.cheat_sheet) ? result.cheat_sheet : [],
           flashcards: Array.isArray(result.flashcards) ? result.flashcards : []
         });
-      } else if (result.id) {
-        pollAnalytics(result.id);
       }
     } catch (error) {
-      console.error("Upload error:", error);
-      alert("Backend runtime pipeline issue. Check if Render instance container is active.");
+      console.error("Execution Exception:", error);
+      alert("Render backend container response timeout. Please try uploading again in a few seconds.");
+    } finally {
       setLoading(false);
     }
-  };
-
-  const pollAnalytics = async (docId) => {
-    let completed = false;
-    let attempts = 0;
-    
-    while (!completed && attempts < 25) {
-      try {
-        await new Promise(r => setTimeout(r, 3000));
-        const statusCheck = await fetch(`${API_BASE_URL}/document/${docId}`);
-        const docStatus = await statusCheck.json();
-        
-        if (docStatus.status === "completed") {
-          const response = await fetch(`${API_BASE_URL}/document/${docId}/analytics`);
-          const result = await response.json();
-          
-          console.log("=== RECEIVED PAYLOAD PACKET ===", result);
-          
-          if (result) {
-            setData({
-              summary: result.summary || "",
-              key_points: Array.isArray(result.key_points) ? result.key_points : [],
-              timeline_dates: Array.isArray(result.timeline_dates) ? result.timeline_dates : [],
-              historians_quotes: Array.isArray(result.historians_quotes) ? result.historians_quotes : [],
-              cheat_sheet: Array.isArray(result.cheat_sheet) ? result.cheat_sheet : [],
-              flashcards: Array.isArray(result.flashcards) ? result.flashcards : []
-            });
-          }
-          
-          setRenderKey(prev => prev + 1); 
-          completed = true;
-        } else if (docStatus.status === "failed") {
-          console.error("Task failed inside engine worker thread.");
-          completed = true;
-        }
-      } catch (error) {
-        console.error("Polling stream exception loop:", error);
-      }
-      attempts++;
-    }
-    setLoading(false);
   };
 
   const highlightStyles = [
@@ -103,12 +65,10 @@ export default function Dashboard() {
 
   const renderPageSummaries = (rawSummary) => {
     if (!rawSummary) return null;
-    
     const parts = rawSummary.split(/### Page\s+(\d+)\s+Summary/i);
     if (parts.length <= 1) {
       return <p className="text-slate-300 leading-relaxed text-sm whitespace-pre-line">{rawSummary}</p>;
     }
-
     const elements = [];
     for (let i = 1; i < parts.length; i += 2) {
       const pageNum = parts[i];
@@ -117,79 +77,76 @@ export default function Dashboard() {
 
       if (pageContent) {
         elements.push(
-          <div key={`page-summary-block-${pageNum}`} className="border border-slate-800/60 bg-[#0f172a]/40 rounded-xl p-5 shadow-sm space-y-3">
-            <div className={`inline-flex items-center gap-2 border px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-sm ${badgeColors[styleIndex]}`}>
-              <FileText className="w-3.5 h-3.5" />
+          <div key={`page-summary-block-${pageNum}`} className="border border-slate-800/60 bg-[#0f172a]/40 rounded-xl p-5 space-y-3" style={{ marginBottom: '1.5rem', border: '1px solid #1e293b', borderRadius: '12px', padding: '1.25rem', backgroundColor: '#0f172a' }}>
+            <div className={`inline-flex items-center gap-2 border px-3 py-1 rounded-full text-xs font-bold tracking-wide ${badgeColors[styleIndex]}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', border: '1px solid #334155', borderRadius: '9999px', padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}>
+              <FileText style={{ width: '14px', height: '14px' }} />
               <span>Page {pageNum.padStart(2, '0')} Insights</span>
             </div>
-            <p className="text-slate-300 leading-relaxed text-sm whitespace-pre-line pl-1">{pageContent}</p>
+            <p className="text-slate-300 leading-relaxed text-sm whitespace-pre-line" style={{ color: '#cbd5e1', fontSize: '0.875rem', lineHeight: '1.625', marginTop: '0.75rem' }}>{pageContent}</p>
           </div>
         );
       }
     }
-    return <div className="space-y-6 mt-2">{elements}</div>;
+    return <div style={{ marginTop: '1rem' }}>{elements}</div>;
   };
 
   return (
-    <div key={renderKey} className="min-h-screen bg-[#0b0f19] text-slate-100 font-sans selection:bg-emerald-500 selection:text-white" style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+    <div className="min-h-screen bg-[#0b0f19] text-slate-100 font-sans" style={{ minHeight: '100vh', width: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', backgroundColor: '#0b0f19', color: '#f8fafc', margin: 0, padding: 0 }}>
       
-      <nav className="border-b border-slate-800 bg-[#0f172a]/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex justify-between items-center" style={{ width: '100%', boxSizing: 'border-box' }}>
-        <div className="flex items-center gap-2.5">
-          <div className="bg-gradient-to-tr from-emerald-400 to-teal-600 p-2 rounded-xl shadow-lg shadow-emerald-500/20">
-            <Sparkles className="w-5 h-5 text-slate-900" />
+      <nav className="border-b border-slate-800 bg-[#0f172a]/80 backdrop-blur-md px-6 py-4 flex justify-between items-center" style={{ width: '100%', boxSizing: 'border-box', borderBottom: '1px solid #1e293b', backgroundColor: '#0f172a', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="flex items-center gap-2.5" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+          <div className="bg-gradient-to-tr from-emerald-400 to-teal-600 p-2 rounded-xl" style={{ background: 'linear-gradient(to top right, #34d399, #0d9488)', padding: '0.5rem', borderRadius: '12px' }}>
+            <Sparkles style={{ width: '20px', height: '20px', color: '#0f172a' }} />
           </div>
-          <span className="text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent tracking-tight">
-            Pagiverse <span className="text-xs text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full ml-1">Beta</span>
+          <span style={{ fontSize: '1.25rem', fontWeight: '700', letterSpacing: '-0.025em', color: '#ffffff' }}>
+            Pagiverse <span style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: '600', backgroundColor: 'rgba(52, 211, 153, 0.1)', padding: '0.125rem 0.5rem', borderRadius: '9999px', marginLeft: '0.25rem' }}>Beta</span>
           </span>
         </div>
       </nav>
 
-      <div className={`p-4 md:p-8 max-w-[1600px] mx-auto grid gap-8 transition-all duration-500 ${data ? 'grid-cols-1 lg:grid-cols-4' : 'grid-cols-1'}`} style={{ width: '100%', maxWidth: '1600px', boxSizing: 'border-box' }}>
+      <div style={{ width: '100%', maxWidth: '1400px', margin: '0 auto', padding: '2rem 1.5rem', boxSizing: 'border-box', flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         
-        <div className={`flex flex-col justify-center transition-all duration-500 ${data ? 'lg:col-span-1 lg:sticky lg:top-24 h-fit' : 'max-w-2xl mx-auto w-full my-12'}`} style={{ width: '100%', boxSizing: 'border-box' }}>
-          <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-2xl" style={{ width: '100%', boxSizing: 'border-box' }}>
-            <h2 className="text-lg font-semibold text-slate-200 mb-5 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-emerald-400" />
-              {data ? "Upload Another File" : "Upload Study Material"}
-            </h2>
-            <form onSubmit={handleUpload} className="space-y-4" style={{ width: '100%' }}>
-              <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-emerald-500/50 rounded-xl p-6 cursor-pointer bg-[#0f172a]/50 w-full" style={{ boxSizing: 'border-box' }}>
-                <Upload className="w-8 h-8 text-slate-500 mb-2" />
-                <span className="text-sm text-slate-300 text-center max-w-[200px] truncate" style={{ width: '100%', display: 'block' }}>{file ? file.name : "Choose PDF / Image"}</span>
-                <input type="file" accept=".pdf,image/*" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
-              </label>
-              <button type="submit" disabled={loading || !file} className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-900 font-bold py-3 rounded-xl hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2" style={{ display: 'flex' }}>
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>Generate Magic ✨</span>
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
+        <div style={{ width: '100%', maxWidth: '640px', backgroundColor: '#111827', border: '1px solid #1e293b', borderRadius: '16px', padding: '1.5rem', boxSizing: 'border-box', marginBottom: '2rem' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#e2e8f0', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FileText style={{ width: '20px', height: '20px', color: '#34d399' }} />
+            {data ? "Upload Another File" : "Upload Study Material"}
+          </h2>
+          <form onSubmit={handleUpload} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #1e293b', borderRadius: '12px', padding: '2rem', cursor: 'pointer', backgroundColor: 'rgba(15, 23, 42, 0.5)', width: '100%', boxSizing: 'border-box' }}>
+              <Upload style={{ width: '32px', height: '32px', color: '#64748b', marginBottom: '0.5rem' }} />
+              <span style={{ fontSize: '0.875rem', color: '#cbd5e1', textAlign: 'center', maxWidth: '100%', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file ? file.name : "Choose PDF / Image"}</span>
+              <input type="file" accept=".pdf,image/*" style={{ display: 'none' }} onChange={(e) => setFile(e.target.files[0])} />
+            </label>
+            <button type="submit" disabled={loading || !file} style={{ width: '100%', background: 'linear-gradient(to right, #10b981, #0d9488)', color: '#0f172a', fontWeight: '700', padding: '0.75rem', borderRadius: '12px', border: 'none', cursor: (loading || !file) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: (loading || !file) ? 0.6 : 1 }}>
+              {loading ? (
+                <div style={{ width: '20px', height: '20px', border: '2px solid #0f172a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+              ) : (
+                <>
+                  <Sparkles style={{ width: '16px', height: '16px' }} />
+                  <span>Generate Magic ✨</span>
+                </>
+              )}
+            </button>
+          </form>
         </div>
 
         {data && (
-          <div className="lg:col-span-3 space-y-8 animate-in fade-in duration-500" style={{ width: '100%', boxSizing: 'border-box' }}>
-            
-            <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-xl" style={{ width: '100%', boxSizing: 'border-box' }}>
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2 border-b border-slate-800 pb-3">
-                <Bookmark className="w-5 h-5 text-blue-400" /> Executive Summary
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderRadius: '16px', padding: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #1e293b', paddingBottom: '0.75rem' }}>
+                <Bookmark style={{ width: '20px', height: '20px', color: '#3b82f6' }} /> Executive Summary
               </h2>
               {renderPageSummaries(data.summary)}
             </div>
 
             {data.timeline_dates && data.timeline_dates.length > 0 && (
-              <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-xl border-t-4 border-t-amber-500/40" style={{ width: '100%', boxSizing: 'border-box' }}>
-                <h2 className="text-xl font-bold mb-5 flex items-center gap-2 border-b border-slate-800 pb-3 text-amber-400">
-                  <Calendar className="w-5 h-5" /> Timeline & Key Dates
+              <div style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderTop: '4px solid rgba(245, 158, 11, 0.4)', borderRadius: '16px', padding: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #1e293b', paddingBottom: '0.75rem', color: '#f59e0b' }}>
+                  <Calendar style={{ width: '20px', height: '20px' }} /> Timeline & Key Dates
                 </h2>
-                <div className="space-y-3">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {data.timeline_dates.map((p, i) => (
-                    <div key={`td-${i}`} className="p-4 rounded-xl text-sm md:text-base font-medium border-l-4 border-amber-500 bg-amber-500/10 text-amber-200">
+                    <div key={`td-${i}`} style={{ padding: '1rem', borderRadius: '12px', fontSize: '0.9375rem', fontWeight: '500', borderLeft: '4px solid #f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#fef3c7' }}>
                       {p}
                     </div>
                   ))}
@@ -198,13 +155,13 @@ export default function Dashboard() {
             )}
 
             {data.historians_quotes && data.historians_quotes.length > 0 && (
-              <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-xl border-t-4 border-t-indigo-500/40" style={{ width: '100%', boxSizing: 'border-box' }}>
-                <h2 className="text-xl font-bold mb-5 flex items-center gap-2 border-b border-slate-800 pb-3 text-indigo-400">
-                  <Quote className="w-5 h-5" /> Historians, Acts & Statements
+              <div style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderTop: '4px solid rgba(99, 102, 241, 0.4)', borderRadius: '16px', padding: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #1e293b', paddingBottom: '0.75rem', color: '#6366f1' }}>
+                  <Quote style={{ width: '20px', height: '20px' }} /> Historians, Acts & Statements
                 </h2>
-                <div className="space-y-3">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {data.historians_quotes.map((p, i) => (
-                    <div key={`hq-${i}`} className="p-4 rounded-xl text-sm md:text-base font-medium border-l-4 border-indigo-500 bg-indigo-500/10 text-indigo-200">
+                    <div key={`hq-${i}`} style={{ padding: '1rem', borderRadius: '12px', fontSize: '0.9375rem', fontWeight: '500', borderLeft: '4px solid #6366f1', backgroundColor: 'rgba(99, 102, 241, 0.1)', color: '#e0e7ff' }}>
                       {p}
                     </div>
                   ))}
@@ -213,15 +170,15 @@ export default function Dashboard() {
             )}
 
             {data.key_points && data.key_points.length > 0 && (
-              <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-xl border-t-4 border-t-emerald-500/40" style={{ width: '100%', boxSizing: 'border-box' }}>
-                <h2 className="text-xl font-bold mb-5 flex items-center gap-2 border-b border-slate-800 pb-3 text-emerald-400">
-                  <Lightbulb className="w-5 h-5" /> High-Focus Key Points
+              <div style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderTop: '4px solid rgba(16, 185, 129, 0.4)', borderRadius: '16px', padding: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #1e293b', paddingBottom: '0.75rem', color: '#10b981' }}>
+                  <Lightbulb style={{ width: '20px', height: '20px' }} /> High-Focus Key Points
                 </h2>
-                <div className="space-y-3">
-                  {data.key_points?.map((p, i) => (
-                    <div key={`kp-${i}`} className={`p-4 rounded-xl text-sm md:text-base font-medium transition-all duration-300 hover:scale-[1.01] ${highlightStyles[i % highlightStyles.length]}`}>
-                      <div className="flex gap-3">
-                        <span className="font-extrabold opacity-70">0{i + 1}.</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {data.key_points.map((p, i) => (
+                    <div key={`kp-${i}`} className={highlightStyles[i % highlightStyles.length]} style={{ padding: '1rem', borderRadius: '12px', fontSize: '0.9375rem', fontWeight: '500' }}>
+                      <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <span style={{ fontWeight: '800', opacity: 0.7 }}>0{i + 1}.</span>
                         <span>{p}</span>
                       </div>
                     </div>
@@ -231,21 +188,23 @@ export default function Dashboard() {
             )}
 
             {data.flashcards && data.flashcards.length > 0 && (
-              <div style={{ width: '100%', boxSizing: 'border-box' }}>
-                <h2 className="text-xl font-bold mb-5 flex items-center gap-2 px-1">
-                  <HelpCircle className="w-5 h-5 text-purple-400" /> Interactive Cards (Click to Flip)
+              <div>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', paddingLeft: '0.25rem' }}>
+                  <HelpCircle style={{ width: '20px', height: '20px', color: '#a855f7' }} /> Interactive Cards (Click to Flip)
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" style={{ width: '100%' }}>
-                  {data.flashcards?.map((c, i) => (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem', width: '100%' }}>
+                  {data.flashcards.map((c, i) => (
                     <Flashcard key={`fc-${i}`} card={c} />
                   ))}
                 </div>
               </div>
             )}
-
           </div>
         )}
       </div>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
@@ -253,25 +212,22 @@ export default function Dashboard() {
 function Flashcard({ card }) {
   const [flipped, setFlipped] = useState(false);
   return (
-    <div className="h-48 cursor-pointer [perspective:1000px] group/card" onClick={() => setFlipped(!flipped)}>
-      <div className={`relative w-full h-full duration-500 [transform-style:preserve-3d] ${flipped ? '[transform:rotateY(180deg)]' : ''}`}>
-        
-        <div className="absolute inset-0 w-full h-full bg-[#111827] border border-slate-800 group-hover/card:border-purple-500/40 p-5 rounded-2xl [backface-visibility:hidden] flex flex-col justify-between shadow-lg">
+    <div style={{ height: '12rem', cursor: 'pointer', perspective: '1000px' }} onClick={() => setFlipped(!flipped)}>
+      <div style={{ position: 'relative', width: '100%', height: '100%', duration: '0.5s', transformStyle: 'preserve-3d', transition: 'transform 0.5s', transform: flipped ? 'rotateY(180deg)' : 'none' }}>
+        <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', backgroundColor: '#111827', border: '1px solid #1e293b', padding: '1.25rem', borderRadius: '16px', backfaceVisibility: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
-            <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">Question</span>
-            <p className="mt-2 text-sm font-semibold text-slate-200 leading-snug line-clamp-4">{card.question}</p>
+            <span style={{ fontSize: '10px', color: '#c084fc', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Question</span>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#e2e8f0', lineHeight: '1.25' }}>{card.question}</p>
           </div>
-          <span className="text-[11px] text-slate-500 font-medium text-right group-hover/card:text-purple-400 transition-colors">Click to flip 👁️</span>
+          <span style={{ fontSize: '11px', color: '#64748b', textAlign: 'right' }}>Click to flip 👁️</span>
         </div>
-
-        <div className="absolute inset-0 w-full h-full bg-[#131c2e] border border-emerald-500/30 p-5 rounded-2xl [backface-visibility:hidden] [transform:rotateY(180deg)] flex flex-col justify-between shadow-2xl">
+        <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', backgroundColor: '#131c2e', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '1.25rem', borderRadius: '16px', backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
-            <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Answer</span>
-            <p className="mt-2 text-xs md:text-sm font-medium text-emerald-100/90 leading-relaxed overflow-y-auto max-h-28 pr-1">{card.answer}</p>
+            <span style={{ fontSize: '10px', color: '#34d399', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Answer</span>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', fontWeight: '500', color: '#ecfdf5', lineHeight: '1.6', overflowY: 'auto', maxHeight: '7rem' }}>{card.answer}</p>
           </div>
-          <span className="text-[11px] text-emerald-400/50 font-medium text-right">Click to hide ↩</span>
+          <span style={{ fontSize: '11px', color: 'rgba(52, 211, 153, 0.5)', textAlign: 'right' }}>Click to hide ↩</span>
         </div>
-
       </div>
     </div>
   );
