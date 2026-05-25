@@ -33,7 +33,7 @@ function Flashcard({ question, answer, index }) {
           flipped ? '[transform:rotateY(180deg)]' : '[transform:rotateY(0deg)]'
         } print:[transform:none]`}
       >
-        {/* Front Component View */}
+        {/* Front */}
         <div className="absolute inset-0 w-full h-full bg-white border border-slate-200 p-6 rounded-3xl [backface-visibility:hidden] flex flex-col justify-between shadow-sm hover:border-slate-300 transition-colors print:relative print:backface-visible print:shadow-none print:rounded-xl print:border-slate-300 print:mb-2">
           <div>
             <span className="text-xs text-slate-500 font-extrabold uppercase tracking-widest">QUESTION BLOCK</span>
@@ -42,7 +42,7 @@ function Flashcard({ question, answer, index }) {
           <span className="text-xs text-slate-400 font-semibold text-right transition-colors print:hidden">Tap Card to Flip 🔄</span>
         </div>
 
-        {/* Back Component View */}
+        {/* Back */}
         <div
           className={`absolute inset-0 w-full h-full bg-gradient-to-br ${colorClass} border p-6 rounded-3xl [backface-visibility:hidden] [transform:rotateY(180deg)] flex flex-col justify-between shadow-sm print:relative print:backface-visible print:[transform:none] print:bg-none print:text-slate-800 print:p-4 print:pt-0 print:shadow-none print:border-b print:border-slate-200 print:rounded-none`}
         >
@@ -59,7 +59,7 @@ function Flashcard({ question, answer, index }) {
   );
 }
 
-function App() {
+export default function Dashboard() {
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -72,7 +72,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [historyList, setHistoryList] = useState([]);
 
-  // Adaptive Matrix Header Dynamic Mapping States
+  // Adaptive Matrix Header States
   const [dynamicTab3Title, setDynamicTab3Title] = useState('Timeline & Chronology');
   const [dynamicTab3Sub, setDynamicTab3Sub] = useState('Date historical structures');
   const [dynamicTab4Title, setDynamicTab4Title] = useState('Quotes, Laws & Acts');
@@ -95,6 +95,7 @@ function App() {
     "Final structural audit completed. Rendering dashboard viewport...",
   ];
 
+  // Load history on mount
   useEffect(() => {
     const localHistory = localStorage.getItem('pagiverse_tabbed_private_history');
     if (localHistory) {
@@ -165,6 +166,7 @@ function App() {
     }
   }, [data]);
 
+  // Loading stage ticker
   useEffect(() => {
     let interval;
     if (loading) {
@@ -178,13 +180,16 @@ function App() {
   }, [loading]);
 
   const handleDrag = (e) => {
-    e.preventDefault(); e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation();
     if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
     else if (e.type === 'dragleave') setDragActive(false);
   };
 
   const handleDrop = (e) => {
-    e.preventDefault(); e.stopPropagation(); setDragActive(false);
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const droppedFile = e.dataTransfer.files[0];
       if (droppedFile.type === 'application/pdf') setFile(droppedFile);
@@ -208,7 +213,8 @@ function App() {
     setData(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/process-pdf`, { method: 'POST', body: formData });
+      // 🛠️ FIX 1: Pointed directly to your working backend endpoint '/upload' instead of '/api/process-pdf'
+      const response = await fetch(`${API_BASE_URL}/upload`, { method: 'POST', body: formData });
       const result = await response.json();
       if (result && result.id) {
         setUploadProgress(50);
@@ -231,11 +237,13 @@ function App() {
       try {
         setUploadProgress(50 + Math.min(attempts * 2, 45));
         await new Promise((r) => setTimeout(r, 3000));
-        const res = await fetch(`${API_BASE_URL}/api/document/${docId}`);
+        
+        // 🛠️ FIX 2: Fixed accurate matching routes path constraint tracking structure
+        const res = await fetch(`${API_BASE_URL}/document/${docId}`);
         const statusCheck = await res.json();
 
         if (statusCheck.status === 'completed') {
-          const dataRes = await fetch(`${API_BASE_URL}/api/document/${docId}/analytics`);
+          const dataRes = await fetch(`${API_BASE_URL}/document/${docId}/analytics`);
           const result = await dataRes.json();
           if (result) {
             const parsedData = {
@@ -314,12 +322,12 @@ function App() {
     });
   };
 
-  // Print all pages (full report mode orchestration)
+  // Print all pages (full report)
   const printWholeDocumentMode = () => {
     window.print();
   };
 
-  // Print only the currently visible active tab frame panel layer
+  // Print only the currently visible tab
   const printTargetTabOnlyMode = () => {
     const printArea = document.getElementById('target-tab-print-viewport');
     if (!printArea) return;
@@ -332,7 +340,13 @@ function App() {
   };
 
   const renderSummaryBlocks = () => {
-    if (!data?.summary) return <div className="text-xs font-bold text-slate-400 py-8 text-center">No summary datasets unallocated.</div>;
+    if (!data?.summary) {
+      return (
+        <div className="text-xs font-bold text-slate-400 py-8 text-center">
+          No summary datasets unallocated.
+        </div>
+      );
+    }
 
     const paragraphs = data.summary.split('\n\n');
     const renderedBlocks = [];
@@ -351,7 +365,7 @@ function App() {
         renderedBlocks.push(
           <div
             key={`p-${idx}`}
-            className="bg-white p-6 rounded-2xl shadow-sm mb-5 border-l-4 border-emerald-500 border border-slate-100"
+            className="bg-white p-5 rounded-2xl shadow-sm mb-4 border-l-4 border-emerald-500 border border-slate-100"
           >
             <p className="text-slate-950 font-black text-base md:text-lg leading-relaxed whitespace-pre-line tracking-wide">
               {paragraph}
@@ -375,7 +389,7 @@ function App() {
         fullscreenMode ? 'fixed inset-0 z-50 overflow-y-auto bg-white p-0 md:p-0' : ''
       }`}
     >
-      {/* ── CLEAN NAVBAR HEADER ── */}
+      {/* ── CLEAN HEADER ── */}
       <header className="no-print flex flex-col sm:flex-row justify-between items-center bg-white border border-slate-200 rounded-3xl p-5 mb-8 shadow-sm gap-4">
         <div className="flex items-center gap-4">
           {data && (
@@ -409,17 +423,17 @@ function App() {
         </div>
       </header>
 
-      {/* ── WORKSPACE CORE GRID LAYOUT ── */}
+      {/* ── MAIN LAYOUT GRID ── */}
       <div
         className={`max-w-[1600px] mx-auto grid gap-8 ${
           data && sidebarOpen ? 'grid-cols-1 lg:grid-cols-4' : 'grid-cols-1'
         }`}
       >
-        {/* Sidebar Frame Controller */}
+        {/* ── SIDEBAR ── */}
         {sidebarOpen && (
           <div className="no-print flex flex-col gap-6 lg:col-span-1">
 
-            {/* Upload Box Component */}
+            {/* Upload Module */}
             <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
               <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
                 <Upload size={16} className="text-emerald-500" /> Feed Core Document PDF
@@ -430,7 +444,10 @@ function App() {
                     ? 'border-emerald-500 bg-emerald-50/50'
                     : 'border-slate-300 bg-slate-50/50 hover:border-emerald-400'
                 }`}
-                onDragEnter={handleDrag} onDragOver={handleDrag} onDragLeave={handleDrag} onDrop={handleDrop}
+                onDragEnter={handleDrag}
+                onDragOver={handleDrag}
+                onDragLeave={handleDrag}
+                onDrop={handleDrop}
                 onClick={() => fileInputRef.current.click()}
               >
                 <input
@@ -467,7 +484,7 @@ function App() {
               )}
             </div>
 
-            {/* Local Private History Box Component */}
+            {/* Local History Module */}
             <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
@@ -511,9 +528,13 @@ function App() {
           </div>
         )}
 
-        {/* Dynamic Upload / Compilation Stage Load Ticker */}
+        {/* ── LOADING INDICATOR ── */}
         {loading && (
-          <div className={`${sidebarOpen ? 'lg:col-span-3' : 'w-full'} bg-white border border-slate-200 rounded-3xl p-8 text-center shadow-sm space-y-6`}>
+          <div
+            className={`${
+              sidebarOpen ? 'lg:col-span-3' : 'w-full'
+            } bg-white border border-slate-200 rounded-3xl p-8 text-center shadow-sm space-y-6`}
+          >
             <div className="max-w-md mx-auto space-y-2">
               <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                 <div
@@ -533,7 +554,7 @@ function App() {
           </div>
         )}
 
-        {/* ── CORE OPERATIONAL VIEWPANEL LAYER ── */}
+        {/* ── MAIN RESULTS VIEWPORT ── */}
         {data && (
           <div
             ref={resultsRef}
@@ -541,7 +562,7 @@ function App() {
               sidebarOpen ? 'lg:col-span-3' : 'w-full'
             } bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm print:border-none print:shadow-none`}
           >
-            {/* Toolbar Area Header */}
+            {/* Toolbar Header */}
             <div className="no-print bg-slate-50/80 backdrop-blur-md p-4 border-b border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-40">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="text-emerald-500 w-5 h-5" />
@@ -583,13 +604,13 @@ function App() {
               </div>
             </div>
 
-            {/* Split UI Content Layout Container Panel */}
+            {/* Split Panel Layout */}
             <div className="grid grid-cols-1 md:grid-cols-4 min-h-[600px] print:block">
 
-              {/* Tab Nav Side Columns List with custom soft colorful gradient highlighters */}
+              {/* Tab Nav Sidebar */}
               <aside className="no-print bg-slate-50/40 border-r border-slate-200 p-3 space-y-2.5 md:col-span-1 max-h-[700px] overflow-y-auto no-scrollbar print:hidden">
 
-                {/* Tab 1 — Page Summaries (mint/emerald gradients) */}
+                {/* Tab 1 — Page Summaries */}
                 <button
                   onClick={() => setActiveTab('summary')}
                   className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
@@ -608,7 +629,7 @@ function App() {
                   <ChevronRight size={12} className="opacity-50 shrink-0" />
                 </button>
 
-                {/* Tab 2 — Deep Insights Matrix (sky blue gradients) */}
+                {/* Tab 2 — Deep Insights */}
                 <button
                   onClick={() => setActiveTab('key_points')}
                   className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
@@ -627,7 +648,7 @@ function App() {
                   <ChevronRight size={12} className="opacity-50 shrink-0" />
                 </button>
 
-                {/* Tab 3 — Dynamic Naming Adapter (amber/lemon gradients) */}
+                {/* Tab 3 — Dynamic Naming */}
                 <button
                   onClick={() => setActiveTab('timeline')}
                   className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
@@ -646,7 +667,7 @@ function App() {
                   <ChevronRight size={12} className="opacity-50 shrink-0" />
                 </button>
 
-                {/* Tab 4 — Dynamic Naming Adapter (indigo/lavender gradients) */}
+                {/* Tab 4 — Dynamic Naming */}
                 <button
                   onClick={() => setActiveTab('quotes')}
                   className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
@@ -665,7 +686,7 @@ function App() {
                   <ChevronRight size={12} className="opacity-50 shrink-0" />
                 </button>
 
-                {/* Tab 5 — Exam Cheat Sheet (rose/pink gradients) */}
+                {/* Tab 5 — Cheat Sheet */}
                 <button
                   onClick={() => setActiveTab('cheat_sheet')}
                   className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
@@ -684,7 +705,7 @@ function App() {
                   <ChevronRight size={12} className="opacity-50 shrink-0" />
                 </button>
 
-                {/* Tab 6 — Active Flashcards Viewport Link (purple/violet gradients) */}
+                {/* Tab 6 — Flashcards */}
                 <button
                   onClick={() => setActiveTab('flashcards')}
                   className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
@@ -712,12 +733,12 @@ function App() {
                 </button>
               </aside>
 
-              {/* Display Content Main Pane View Field Terminal */}
+              {/* ── DATA DISPLAY AREA ── */}
               <main id="target-tab-print-viewport" className="md:col-span-3 p-6 md:p-8 bg-white print:p-0">
 
-                {/* PAGE SUMMARIES LAYER CONTAINER */}
-                {(activeTab === 'summary' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-4 ${activeTab !== 'summary' ? 'print:block hidden' : ''}`}>
+                {/* PAGE SUMMARIES */}
+                {activeTab === 'summary' && (
+                  <div className="space-y-4">
                     <div className="text-xs font-black tracking-widest text-emerald-600 uppercase border-b border-slate-100 pb-2 mb-4">
                       💡 {dynamicSummaryHighlight}
                     </div>
@@ -725,10 +746,9 @@ function App() {
                   </div>
                 )}
 
-                {/* DEEP INSIGHTS BULLET POINTS LAYER CONTAINER */}
-                {(activeTab === 'key_points' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-4 ${activeTab !== 'key_points' ? 'print:block hidden print:break-before-page' : ''}`}>
-                    <h2 className="hidden print:flex text-lg font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><BookOpen size={16}/> Deep Insights Matrix</h2>
+                {/* DEEP INSIGHTS MATRIX */}
+                {activeTab === 'key_points' && (
+                  <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-3">
                       {data.key_points.map((item, idx) => (
                         <div
@@ -752,10 +772,9 @@ function App() {
                   </div>
                 )}
 
-                {/* TIMELINE / CHRONOLOGICAL PROCESS LOG CONNECTOR ARRAYS */}
-                {(activeTab === 'timeline' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-4 ${activeTab !== 'timeline' ? 'print:block hidden print:break-before-page' : ''}`}>
-                    <h2 className="hidden print:flex text-lg font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><Calendar size={16}/> {dynamicTab3Title}</h2>
+                {/* TIMELINE */}
+                {activeTab === 'timeline' && (
+                  <div className="space-y-4">
                     <div className="space-y-3 border-l-2 border-amber-300 pl-4 ml-2 relative">
                       {data.timeline_dates.map((dateEvent, idx) => (
                         <div
@@ -768,17 +787,16 @@ function App() {
                       ))}
                       {data.timeline_dates.length === 0 && (
                         <div className="text-xs font-bold text-slate-400 py-8 text-center">
-                          No sequential entries found.
+                          No sequential array entries found.
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* VERBATIM INSTITUTIONAL REGULATORY ACT DATA RECORDS */}
-                {(activeTab === 'quotes' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-4 ${activeTab !== 'quotes' ? 'print:block hidden print:break-before-page' : ''}`}>
-                    <h2 className="hidden print:flex text-lg font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><Layers size={16}/> {dynamicTab4Title}</h2>
+                {/* QUOTES */}
+                {activeTab === 'quotes' && (
+                  <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-4">
                       {data.historians_quotes.map((quoteText, idx) => (
                         <div
@@ -795,17 +813,16 @@ function App() {
                       ))}
                       {data.historians_quotes.length === 0 && (
                         <div className="text-xs font-bold text-slate-400 py-8 text-center">
-                          No verbatim blocks located.
+                          No verbatim statement blocks found.
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* EXAM CORE SELECTION COMPILER CHEAT SHEET ROWS */}
-                {(activeTab === 'cheat_sheet' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-4 ${activeTab !== 'cheat_sheet' ? 'print:block hidden print:break-before-page' : ''}`}>
-                    <h2 className="hidden print:flex text-lg font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><Sparkles size={16}/> High Weightage Cheat-Sheet</h2>
+                {/* EXAM CHEAT-SHEET */}
+                {activeTab === 'cheat_sheet' && (
+                  <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-3">
                       {cheatSheetArray.map((cheatPoint, idx) => (
                         <div
@@ -820,16 +837,16 @@ function App() {
                       ))}
                       {cheatSheetArray.length === 0 && (
                         <div className="text-xs font-bold text-slate-400 py-8 text-center">
-                          No cheat sheet parameters found.
+                          No cheat sheet entries found.
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* INTERACTIVE FLASHCARDS GRID AREA */}
-                {(activeTab === 'flashcards' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-6 ${activeTab !== 'flashcards' ? 'print:block hidden print:break-before-page' : ''}`}>
+                {/* INTERACTIVE FLASHCARDS */}
+                {activeTab === 'flashcards' && (
+                  <div className="space-y-6">
                     <h2 className="text-xl font-extrabold flex items-center gap-2 ml-1 text-slate-800">
                       <HelpCircle size={20} className="text-purple-500" /> Core Interactive Flashcards
                     </h2>
@@ -860,5 +877,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
