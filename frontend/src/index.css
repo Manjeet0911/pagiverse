@@ -1,25 +1,23 @@
 @import "tailwindcss";
 
-/* Tailwind v4 ko batana ki hamare saare React components kahan hain */
-@source "../index.html";
-@source "./**/*.{js,ts,jsx,tsx}";
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 body {
-  background-color: #f3f4f6; /* Soft professional gray background */
   margin: 0;
-  font-family: Inter, system-ui, -apple-system, sans-serif;
-}
-
-/* Flashcard 3D Flip Effects */
-.perspective-1000 {
-  perspective: 1000px;
-}
-.transform-style-3d {
-  transform-style: preserve-3d;
-}
-.backface-hidden {
-  backface-visibility: hidden;
-}
-.rotate-y-180 {
-  transform: rotateY(180deg);
+  min-width: 320px;
+  min-height: 100vh;
+  background: radial-gradient(circle at top right, #1e1b4b 0%, #0f172a 100%) !important;
 }

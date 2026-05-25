@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, Sparkles, Lightbulb, Bookmark, HelpCircle, Calendar, Quote } from 'lucide-react';
+
+// 🚀 NATIVE LIVE BACKEND PRODUCTION CLUSTER ENDPOINT INTERACTION
+const API_BASE_URL = "https://pagiverse.onrender.com";
 
 export default function Dashboard() {
   const [file, setFile] = useState(null);
@@ -17,14 +20,30 @@ export default function Dashboard() {
     formData.append("file", file);
 
     try {
-      const response = await fetch("http://localhost:8000/upload", {
+      // Configured safely to hit the live cloud network instead of localhost
+      const response = await fetch(`${API_BASE_URL}/api/process-pdf`, {
         method: "POST",
         body: formData,
       });
       const result = await response.json();
-      pollAnalytics(result.id);
+      
+      // Render directly handles responses instantly, if background polling is required
+      // we check fallback keys or map response data directly.
+      if (result && result.summary) {
+        setData({
+          summary: result.summary || "",
+          key_points: Array.isArray(result.key_points) ? result.key_points : [],
+          timeline_dates: Array.isArray(result.timeline_dates) ? result.timeline_dates : [],
+          historians_quotes: Array.isArray(result.historians_quotes) ? result.historians_quotes : [],
+          cheat_sheet: Array.isArray(result.cheat_sheet) ? result.cheat_sheet : [],
+          flashcards: Array.isArray(result.flashcards) ? result.flashcards : []
+        });
+      } else if (result.id) {
+        pollAnalytics(result.id);
+      }
     } catch (error) {
       console.error("Upload error:", error);
+      alert("Backend runtime pipeline issue. Check if Render instance container is active.");
       setLoading(false);
     }
   };
@@ -36,11 +55,11 @@ export default function Dashboard() {
     while (!completed && attempts < 25) {
       try {
         await new Promise(r => setTimeout(r, 3000));
-        const statusCheck = await fetch(`http://localhost:8000/document/${docId}`);
+        const statusCheck = await fetch(`${API_BASE_URL}/document/${docId}`);
         const docStatus = await statusCheck.json();
         
         if (docStatus.status === "completed") {
-          const response = await fetch(`http://localhost:8000/document/${docId}/analytics`);
+          const response = await fetch(`${API_BASE_URL}/document/${docId}/analytics`);
           const result = await response.json();
           
           console.log("=== RECEIVED PAYLOAD PACKET ===", result);
@@ -78,7 +97,6 @@ export default function Dashboard() {
     "border-l-4 border-rose-500 bg-rose-500/10 text-rose-200"
   ];
 
-  // Dynamic style badge mapping logic for Page Summaries
   const badgeColors = [
     "border-cyan-500/30 bg-cyan-500/10 text-cyan-400 shadow-cyan-500/5",
     "border-indigo-500/30 bg-indigo-500/10 text-indigo-400 shadow-indigo-500/5",
@@ -87,7 +105,6 @@ export default function Dashboard() {
     "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-400 shadow-fuchsia-500/5"
   ];
 
-  // Professional parser utility to isolate raw text into discrete page blocks
   const renderPageSummaries = (rawSummary) => {
     if (!rawSummary) return null;
     
@@ -99,7 +116,8 @@ export default function Dashboard() {
     const elements = [];
     for (let i = 1; i < parts.length; i += 2) {
       const pageNum = parts[i];
-      const pageContent = parts[i + 1] ? parts[i + 1].strip ? parts[i + 1].strip() : parts[i + 1].trim() : "";
+      // Fixed Python runtime specific .strip crash bug safely using native Javascript JS .trim
+      const pageContent = parts[i + 1] ? parts[i + 1].trim() : "";
       const styleIndex = (parseInt(pageNum, 10) || 0) % badgeColors.length;
 
       if (pageContent) {
@@ -199,32 +217,36 @@ export default function Dashboard() {
               </div>
             )}
 
-            <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-xl border-t-4 border-t-emerald-500/40">
-              <h2 className="text-xl font-bold mb-5 flex items-center gap-2 border-b border-slate-800 pb-3 text-emerald-400">
-                <Lightbulb className="w-5 h-5" /> High-Focus Key Points
-              </h2>
-              <div className="space-y-3">
-                {data.key_points?.map((p, i) => (
-                  <div key={`kp-${i}`} className={`p-4 rounded-xl text-sm md:text-base font-medium transition-all duration-300 hover:scale-[1.01] ${highlightStyles[i % highlightStyles.length]}`}>
-                    <div className="flex gap-3">
-                      <span className="font-extrabold opacity-70">0{i + 1}.</span>
-                      <span>{p}</span>
+            {data.key_points && data.key_points.length > 0 && (
+              <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 shadow-xl border-t-4 border-t-emerald-500/40">
+                <h2 className="text-xl font-bold mb-5 flex items-center gap-2 border-b border-slate-800 pb-3 text-emerald-400">
+                  <Lightbulb className="w-5 h-5" /> High-Focus Key Points
+                </h2>
+                <div className="space-y-3">
+                  {data.key_points?.map((p, i) => (
+                    <div key={`kp-${i}`} className={`p-4 rounded-xl text-sm md:text-base font-medium transition-all duration-300 hover:scale-[1.01] ${highlightStyles[i % highlightStyles.length]}`}>
+                      <div className="flex gap-3">
+                        <span className="font-extrabold opacity-70">0{i + 1}.</span>
+                        <span>{p}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            <div>
-              <h2 className="text-xl font-bold mb-5 flex items-center gap-2 px-1">
-                <HelpCircle className="w-5 h-5 text-purple-400" /> Interactive Cards (Click to Flip)
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {data.flashcards?.map((c, i) => (
-                  <Flashcard key={`fc-${i}`} card={c} />
-                ))}
+            {data.flashcards && data.flashcards.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold mb-5 flex items-center gap-2 px-1">
+                  <HelpCircle className="w-5 h-5 text-purple-400" /> Interactive Cards (Click to Flip)
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {data.flashcards?.map((c, i) => (
+                    <Flashcard key={`fc-${i}`} card={c} />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
           </div>
         )}
