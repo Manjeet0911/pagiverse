@@ -4,12 +4,12 @@ import {
   Layers, HelpCircle, CheckCircle2, AlertTriangle, 
   Download, RefreshCw, ChevronRight, Copy, Check,
   Maximize2, Minimize2, ArrowRight, Info, Search, FileDown,
-  PanelLeftClose, PanelLeftOpen, Trash2, X
+  PanelLeftClose, PanelLeftOpen, Trash2, X, History
 } from 'lucide-react';
 
 const API_BASE_URL = "https://pagiverse.onrender.com";
 
-// --- ORIGINAL INTERACTIVE FLASHCARD CARD SUB-SYSTEM (PREMIUM GRADIENTS) ---
+// --- INTERACTIVE FLASHCARD CARD SUB-SYSTEM ---
 function Flashcard({ question, answer, index }) {
   const [flipped, setFlipped] = useState(false);
   
@@ -265,6 +265,39 @@ export default function Dashboard() {
     return options;
   };
 
+  const renderSummaryBlocks = () => {
+    if (!data?.summary) return <div className="text-xs font-bold text-slate-400 py-8 text-center">No summary datasets unallocated.</div>;
+    
+    const paragraphs = data.summary.split('\n\n');
+    let currentHeading = "";
+    const renderedBlocks = [];
+    
+    paragraphs.forEach((paragraph, idx) => {
+      if (paragraph.trim().startsWith('### Page')) {
+        currentHeading = paragraph.split('\n')[0].replace('### ', '').trim();
+      }
+      if (selectedPageFilter === 'all' || currentHeading === selectedPageFilter) {
+        if (paragraph.trim().startsWith('### Page')) {
+          renderedBlocks.push(
+            <h3 key={`h-${idx}`} className="text-sm font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-4 py-2 rounded-xl mt-4 mb-2 max-w-max tracking-wide">
+              {paragraph.replace('### ', '')}
+            </h3>
+          );
+        } else if (paragraph.trim() !== '') {
+          if (searchQuery === '' || paragraph.toLowerCase().includes(searchQuery.toLowerCase())) {
+            renderedBlocks.push(
+              <p key={`p-${idx}`} className="text-slate-600 font-medium text-sm leading-relaxed whitespace-pre-line border-l-2 border-slate-200 pl-4 py-1">
+                {paragraph}
+              </p>
+            );
+          }
+        }
+      }
+    });
+    
+    return renderedBlocks.length > 0 ? <div className="space-y-4">{renderedBlocks}</div> : <div className="text-xs font-bold text-slate-400 py-8 text-center">No structural distribution matched filters.</div>;
+  };
+
   return (
     <div className={`min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-emerald-200 p-4 md:p-6 ${fullscreenMode ? 'fixed inset-0 z-50 overflow-y-auto bg-white p-0 md:p-0' : ''}`}>
       
@@ -458,35 +491,15 @@ export default function Dashboard() {
               <main className="md:col-span-3 p-6 md:p-8 bg-white print:p-0">
                 
                 {/* PAGE SUMMARIES WORKSPACE TAB */}
-                {(activeTab === 'summary' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-6 ${activeTab !== 'summary' ? 'print:block hidden' : ''}`}>
-                    <h2 className="hidden print:flex text-xl font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><FileText size={18}/> Page Summaries Analysis</h2>
-                    {data.summary ? (
-                      (() => {
-                        const paragraphs = data.summary.split('\n\n');
-                        let currentHeading = ""; const renderedBlocks = [];
-                        paragraphs.forEach((paragraph, idx) => {
-                          if (paragraph.trim().startsWith('### Page')) currentHeading = paragraph.split('\n')[0].replace('### ', '').trim();
-                          if (selectedPageFilter === 'all' || currentHeading === selectedPageFilter) {
-                            if (paragraph.trim().startsWith('### Page')) {
-                              renderedBlocks.push(<h3 key={`h-${idx}`} className="text-sm font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-4 py-2 rounded-xl mt-4 mb-2 max-w-max tracking-wide">{paragraph.replace('### ', '')}</h3>);
-                            } else if (paragraph.trim() !== '') {
-                              if (searchQuery === '' || paragraph.toLowerCase().includes(searchQuery.toLowerCase())) {
-                                renderedBlocks.push(<p key={`p-${idx}`} className="text-slate-600 font-medium text-sm leading-relaxed whitespace-pre-line border-l-2 border-slate-200 pl-4 py-1">{paragraph}</p>);
-                              }
-                            }
-                          }
-                        });
-                        return renderedBlocks.length > 0 ? <div className="space-y-4">{renderedBlocks}</div> : <div className="text-xs font-bold text-slate-400 py-8 text-center">No structural distribution matched filters.</div>;
-                      })()
-                    ) : <div className="text-xs font-bold text-slate-400 py-8 text-center">No summary datasets unallocated.</div>}
+                {activeTab === 'summary' && (
+                  <div className="space-y-6">
+                    {renderSummaryBlocks()}
                   </div>
                 )}
 
                 {/* DEEP INSIGHTS MATRIX WORKSPACE TAB */}
-                {(activeTab === 'key_points' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-4 ${activeTab !== 'key_points' ? 'print:block hidden' : ''}`}>
-                    <h2 className="hidden print:flex text-xl font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><BookOpen size={18}/> Deep Insights Matrix</h2>
+                {activeTab === 'key_points' && (
+                  <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-3">
                       {filterArrayData(data.key_points).map((item, idx) => (
                         <div key={idx} className="flex gap-4 p-4 border border-slate-100 bg-slate-50/50 rounded-2xl border-l-4 border-l-blue-400 hover:scale-[1.005] transition-all">
@@ -500,9 +513,8 @@ export default function Dashboard() {
                 )}
 
                 {/* TIMELINE & CHRONOLOGY TIMELINE WORKSPACE TAB */}
-                {(activeTab === 'timeline' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-4 ${activeTab !== 'timeline' ? 'print:block hidden' : ''}`}>
-                    <h2 className="hidden print:flex text-xl font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><Calendar size={18}/> Chronological Timeline</h2>
+                {activeTab === 'timeline' && (
+                  <div className="space-y-4">
                     <div className="space-y-3 border-l-2 border-amber-300 pl-4 ml-2 relative">
                       {filterArrayData(data.timeline_dates).map((dateEvent, idx) => (
                         <div key={idx} className="relative group p-3 rounded-xl border border-slate-100 bg-amber-50/40 text-amber-900 text-xs font-bold shadow-sm">
@@ -516,9 +528,8 @@ export default function Dashboard() {
                 )}
 
                 {/* HISTORIANS QUOTES / STATUTORY ACTS TAB */}
-                {(activeTab === 'quotes' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-4 ${activeTab !== 'quotes' ? 'print:block hidden' : ''}`}>
-                    <h2 className="hidden print:flex text-xl font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><Layers size={18}/> Quotes, Laws & Institutional Acts</h2>
+                {activeTab === 'quotes' && (
+                  <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-4">
                       {filterArrayData(data.historians_quotes).map((quoteText, idx) => (
                         <div key={idx} className="p-5 border border-slate-100 bg-indigo-50/40 text-indigo-950 rounded-2xl relative border-l-4 border-l-indigo-400">
@@ -532,11 +543,10 @@ export default function Dashboard() {
                 )}
 
                 {/* EXAM CHEAT-SHEET WORKSPACE DATA MATRIX TAB */}
-                {(activeTab === 'cheat_sheet' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-4 ${activeTab !== 'cheat_sheet' ? 'print:block hidden' : ''}`}>
-                    <h2 className="hidden print:flex text-xl font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><Sparkles size={18}/> High Weightage Cheat-Sheet</h2>
+                {activeTab === 'cheat_sheet' && (
+                  <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-3">
-                      {(data.cheat_sheet && data.cheat_sheet.length > 0 ? filterArrayData(data.cheat_sheet) : filterArrayData(data.key_points?.slice(0, 10) || [])).map((cheatPoint, idx) => (
+                      {filterArrayData(data.cheat_sheet && data.cheat_sheet.length > 0 ? data.cheat_sheet : data.key_points?.slice(0, 10) || []).map((cheatPoint, idx) => (
                         <div key={idx} className="flex gap-4 p-4 border border-slate-100 bg-emerald-50/30 rounded-2xl border-l-4 border-l-emerald-500">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
                           <p className="text-xs font-bold text-slate-700 leading-relaxed">{cheatPoint}</p>
@@ -547,8 +557,8 @@ export default function Dashboard() {
                 )}
 
                 {/* INTERACTIVE DYNAMIC FLASHCARDS VIEWPORT INDEX */}
-                {(activeTab === 'flashcards' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-6 ${activeTab !== 'flashcards' ? 'print:block hidden print:break-before-page' : ''}`}>
+                {activeTab === 'flashcards' && (
+                  <div className="space-y-6">
                     <h2 className="text-xl font-extrabold flex items-center gap-2 ml-1 text-slate-800"><HelpCircle size={20} className="text-purple-500"/> Core Interactive Flashcards</h2>
                     {data.flashcards && data.flashcards.length > 0 ? (
                       (() => {
