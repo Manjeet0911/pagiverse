@@ -11,12 +11,12 @@ const API_BASE_URL = "https://pagiverse.onrender.com";
 
 // ── TAB COLOR PALETTES ──────────────────────────────────────────────────────
 const TAB_PALETTE = {
-  summary:    { bg: 'bg-emerald-50',  border: 'border-emerald-200',  accent: 'border-l-emerald-500',  badge: 'bg-emerald-100 border-emerald-300 text-emerald-800',  label: 'text-emerald-700',  dot: 'bg-emerald-400' },
-  key_points: { bg: 'bg-sky-50',      border: 'border-sky-200',      accent: 'border-l-sky-500',      badge: 'bg-sky-100 border-sky-300 text-sky-800',              label: 'text-sky-700',    dot: 'bg-sky-400' },
-  timeline:   { bg: 'bg-amber-50',    border: 'border-amber-200',    accent: 'border-l-amber-500',    badge: 'bg-amber-100 border-amber-300 text-amber-800',         label: 'text-amber-700',    dot: 'bg-amber-400' },
-  quotes:     { bg: 'bg-indigo-50',   border: 'border-indigo-200',   accent: 'border-l-indigo-500',   badge: 'bg-indigo-100 border-indigo-300 text-indigo-800',      label: 'text-indigo-700',   dot: 'bg-indigo-400' },
-  cheat_sheet:{ bg: 'bg-rose-50',     border: 'border-rose-200',     accent: 'border-l-rose-500',     badge: 'bg-rose-100 border-rose-300 text-rose-800',            label: 'text-rose-700',     dot: 'bg-rose-400' },
-  flashcards: { bg: 'bg-purple-50',   border: 'border-purple-200',   accent: 'border-l-purple-500',   badge: 'bg-purple-100 border-purple-300 text-purple-800',      label: 'text-purple-700',   dot: 'bg-purple-400' },
+  summary:    { bg: 'bg-emerald-50/70', border: 'border-emerald-200', accent: 'border-l-emerald-500', badge: 'bg-emerald-100 border-emerald-300 text-emerald-800', label: 'text-emerald-700' },
+  key_points: { bg: 'bg-sky-50/70',     border: 'border-sky-200',     accent: 'border-l-sky-500',     badge: 'bg-sky-100 border-sky-300 text-sky-800',             label: 'text-sky-700' },
+  timeline:   { bg: 'bg-amber-50/70',   border: 'border-amber-200',   accent: 'border-l-amber-400',   badge: 'bg-amber-100 border-amber-300 text-amber-800',       label: 'text-amber-700' },
+  quotes:     { bg: 'bg-indigo-50/70',  border: 'border-indigo-200',  accent: 'border-l-indigo-500',  badge: 'bg-indigo-100 border-indigo-300 text-indigo-800',    label: 'text-indigo-700' },
+  cheat_sheet:{ bg: 'bg-rose-50/70',    border: 'border-rose-200',    accent: 'border-l-rose-500',    badge: 'bg-rose-100 border-rose-300 text-rose-800',          label: 'text-rose-700' },
+  flashcards: { bg: 'bg-purple-50/70',  border: 'border-purple-200',  accent: 'border-l-purple-500',  badge: 'bg-purple-100 border-purple-300 text-purple-800',    label: 'text-purple-700' },
 };
 
 // ── FLASHCARD COMPONENT ─────────────────────────────────────────────────────
@@ -24,12 +24,12 @@ function Flashcard({ question, answer, index }) {
   const [flipped, setFlipped] = useState(false);
 
   const answerPastels = [
-    'bg-sky-50 border-sky-200 text-sky-950',
-    'bg-emerald-50 border-emerald-200 text-emerald-950',
-    'bg-amber-50 border-amber-200 text-amber-950',
-    'bg-purple-50 border-purple-200 text-purple-950',
-    'bg-rose-50 border-rose-200 text-rose-950',
-    'bg-teal-50 border-teal-200 text-teal-950',
+    'bg-sky-50/80 border-sky-200 text-sky-950',
+    'bg-emerald-50/80 border-emerald-200 text-emerald-950',
+    'bg-amber-50/80 border-amber-200 text-amber-950',
+    'bg-purple-50/80 border-purple-200 text-purple-950',
+    'bg-rose-50/80 border-rose-200 text-rose-950',
+    'bg-teal-50/80 border-teal-200 text-teal-950',
   ];
   const answerColor = answerPastels[index % answerPastels.length];
 
@@ -211,18 +211,16 @@ export default function Dashboard() {
     }
   };
 
-  // FIXED POLLING STRATEGY: Enforces absolute timeout limits to avoid infinite stuck loop pipelines
   const pollAnalytics = async (docId, fileName) => {
     let completed = false;
     let attempts = 0;
-    const maxAttempts = 30; // 90 seconds timeout break wall
+    const maxAttempts = 35;
 
     while (!completed && attempts < maxAttempts) {
       try {
         setUploadProgress(40 + Math.min(attempts * 2, 55));
         await new Promise((r) => setTimeout(r, 3000));
         
-        // Native clean state fetch targeting exact API parameters
         const res = await fetch(`${API_BASE_URL}/document/${docId}`, {
           headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
         });
@@ -258,13 +256,9 @@ export default function Dashboard() {
           completed = true;
         }
       } catch (err) {
-        console.error("Polling stream interruption:", err);
+        console.error("Polling interruption:", err);
       }
       attempts++;
-    }
-    
-    if (!completed) {
-      alert("Pipeline Request Timeout. Shifting thread context. Try loading from Archive Repository.");
     }
     setLoading(false);
   };
@@ -298,140 +292,97 @@ export default function Dashboard() {
     }
   };
 
+  // ── VISUAL NATIVE PDF PRINT ENGINE ──
   const handleDownloadPdfReport = () => {
     if (!data) return;
     setDownloadingPdf(true);
 
     const cheatArr = data.cheat_sheet?.length > 0 ? data.cheat_sheet : data.key_points?.slice(0, 10) || [];
     const summaryBlocks = buildSummaryMap(data.summary);
-    const sectionStyle = (bg, accent) => `background:${bg};border-left:4px solid ${accent};border-radius:12px;padding:20px 24px;margin-bottom:12px;`;
-    const escHtml = (str) => String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const escHtml = (str) => String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^\s*[\*\-\+]\s*/gm, '');
 
     const summaryHtml = Object.keys(summaryBlocks).map((header) => `
-      <div style="margin-bottom:28px;">
-        <div style="display:inline-block;background:#e6f4ea;border:1px solid #6ee7b7;color:#137333;font-size:10px;font-weight:900;letter-spacing:0.15em;text-transform:uppercase;padding:6px 14px;border-radius:20px;margin-bottom:10px;">✨ ${escHtml(header)}</div>
-        <div style="${sectionStyle('#ffffff','#10b981')}border: 1px solid #e2e8f0;">
-          <p style="color:#000000;font-size:15px;font-weight:700;line-height:1.75;white-space:pre-line;margin:0;">${escHtml(summaryBlocks[header].join('\n\n'))}</p>
+      <div style="margin-bottom:24px;page-break-inside:avoid;">
+        <div style="display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:11px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;padding:5px 12px;border-radius:8px;margin-bottom:8px;font-family:sans-serif;">✨ ${escHtml(header)}</div>
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid #10b981;border-radius:12px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+          <p style="color:#030712;font-size:15px;font-weight:800;line-height:1.7;white-space:pre-line;margin:0;font-family:sans-serif;">${escHtml(summaryBlocks[header].join('\n\n'))}</p>
         </div>
       </div>
     `).join('');
 
     const keyPointsHtml = data.key_points.map((item, idx) => `
-      <div style="${sectionStyle('#f0f9ff','#38bdf8')}display:flex;gap:14px;align-items:flex-start;">
-        <span style="color:#38bdf8;font-weight:900;font-size:12px;margin-top:2px;min-width:24px;">${String(idx+1).padStart(2,'0')}.</span>
-        <p style="color:#0f172a;font-size:14px;font-weight:700;line-height:1.7;margin:0;">${escHtml(item)}</p>
+      <div style="background:#f0f9ff;border:1px solid #e0f2fe;border-left:4px solid #0284c7;border-radius:12px;padding:16px;margin-bottom:12px;display:flex;gap:12px;page-break-inside:avoid;font-family:sans-serif;">
+        <span style="color:#0284c7;font-weight:900;font-size:13px;min-width:20px;">${String(idx+1).padStart(2,'0')}.</span>
+        <p style="color:#030712;font-size:14px;font-weight:800;line-height:1.6;margin:0;">${escHtml(item)}</p>
       </div>
     `).join('');
 
-    const timelineHtml = `<div style="border-left:3px solid #fbbf24;padding-left:20px;margin-left:10px;">` +
-      data.timeline_dates.map(event => `
-        <div style="${sectionStyle('#fffbeb','#f59e0b')}position:relative;">
-          <div style="position:absolute;left:-30px;top:16px;width:10px;height:10px;border-radius:50%;background:#fbbf24;border:2px solid #fff;"></div>
-          <p style="color:#451a03;font-size:14px;font-weight:700;margin:0;">${escHtml(event)}</p>
-        </div>
-      `).join('') + `</div>`;
+    const timelineHtml = data.timeline_dates.map((event, idx) => `
+      <div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #d97706;border-radius:12px;padding:16px;margin-bottom:12px;page-break-inside:avoid;font-family:sans-serif;">
+        <p style="color:#451a03;font-size:14px;font-weight:800;line-height:1.6;margin:0;">${escHtml(event)}</p>
+      </div>
+    `).join('');
 
     const quotesHtml = data.historians_quotes.map(q => `
-      <div style="${sectionStyle('#eef2ff','#6366f1')}position:relative;">
-        <span style="position:absolute;right:16px;top:4px;font-size:40px;font-family:Georgia,serif;color:#c7d2fe;line-height:1;">"</span>
-        <p style="color:#1e1b4b;font-size:14px;font-weight:700;line-height:1.7;padding-right:30px;margin:0;">${escHtml(q)}</p>
+      <div style="background:#f5f3ff;border:1px solid #ede9fe;border-left:4px solid #7c3aed;border-radius:12px;padding:18px;margin-bottom:12px;position:relative;page-break-inside:avoid;font-family:sans-serif;">
+        <p style="color:#1e1b4b;font-size:14px;font-weight:800;line-height:1.6;margin:0;font-style:italic;">"${escHtml(q)}"</p>
       </div>
     `).join('');
 
     const cheatHtml = cheatArr.map(point => `
-      <div style="${sectionStyle('#fff1f2','#f43f5e')}display:flex;gap:12px;align-items:flex-start;">
-        <span style="width:8px;height:8px;border-radius:50%;background:#f43f5e;flex-shrink:0;margin-top:5px;"></span>
-        <p style="color:#0f172a;font-size:14px;font-weight:700;line-height:1.7;margin:0;">${escHtml(point)}</p>
+      <div style="background:#fff1f2;border:1px solid #ffe4e6;border-left:4px solid #f43f5e;border-radius:12px;padding:16px;margin-bottom:12px;page-break-inside:avoid;font-family:sans-serif;">
+        <p style="color:#030712;font-size:14px;font-weight:800;line-height:1.6;margin:0;">${escHtml(point)}</p>
       </div>
     `).join('');
 
     const flashcardsHtml = data.flashcards.map((card, idx) => `
-      <div style="display:flex;gap:12px;margin-bottom:16px;page-break-inside:avoid;">
-        <div style="flex:1;background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:16px;">
-          <span style="font-size:9px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:0.15em;display:block;margin-bottom:8px;">Q${String(idx+1).padStart(2,'0')}</span>
-          <p style="font-size:13px;font-weight:800;color:#0f172a;line-height:1.5;margin:0;">${escHtml(card.question)}</p>
+      <div style="display:flex;gap:12px;margin-bottom:14px;page-break-inside:avoid;font-family:sans-serif;">
+        <div style="flex:1;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
+          <span style="font-size:9px;font-weight:900;color:#64748b;letter-spacing:0.1em;display:block;margin-bottom:4px;">Q${String(idx+1).padStart(2,'0')}</span>
+          <p style="font-size:13px;font-weight:800;color:#0f172a;margin:0;">${escHtml(card.question)}</p>
         </div>
-        <div style="flex:1;background:#f5f3ff;border:2px solid #ddd6fe;border-radius:12px;padding:16px;">
-          <span style="font-size:9px;font-weight:900;color:#7c3aed;text-transform:uppercase;letter-spacing:0.15em;display:block;margin-bottom:8px;">ANSWER</span>
-          <p style="font-size:13px;font-weight:800;color:#1e1b4b;line-height:1.5;margin:0;">${escHtml(card.answer)}</p>
+        <div style="flex:1;background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:14px;">
+          <span style="font-size:9px;font-weight:900;color:#7c3aed;letter-spacing:0.1em;display:block;margin-bottom:4px;">ANSWER</span>
+          <p style="font-size:13px;font-weight:800;color:#1e1b4b;margin:0;">${escHtml(card.answer)}</p>
         </div>
       </div>
     `).join('');
 
-    const sectionHeader = (icon, title, color) =>
-      `<div style="display:flex;align-items:center;gap:10px;border-bottom:2px solid ${color};padding-bottom:10px;margin-bottom:20px;page-break-after:avoid;">
-        <span style="font-size:18px;">${icon}</span>
-        <h2 style="font-size:20px;font-weight:900;color:#0f172a;margin:0;letter-spacing:-0.02em;">${escHtml(title)}</h2>
+    const sectionHeader = (title, color) =>
+      `<div style="border-bottom:2px solid ${color};padding-bottom:6px;margin-top:32px;margin-bottom:16px;page-break-after:avoid;font-family:sans-serif;">
+        <h2 style="font-size:18px;font-weight:900;color:#0f172a;margin:0;text-transform:uppercase;letter-spacing:0.02em;">${title}</h2>
       </div>`;
 
-    const fullHtml = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>Pagiverse — Full Analysis Report</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap');
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'DM Sans', sans-serif; background: #fff; color: #0f172a; padding: 48px; }
-    .report-header { margin-bottom: 40px; padding-bottom: 24px; border-bottom: 3px solid #10b981; }
-    .section { margin-bottom: 48px; page-break-inside: avoid; }
-    @media print {
-      body { padding: 20px; }
-      .section { page-break-before: always; }
-      .section:first-of-type { page-break-before: avoid; }
-    }
-  </style>
-</head>
-<body>
-  <div class="report-header">
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px;">
-      <div style="background:linear-gradient(135deg,#10b981,#0d9488);width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
-        <span style="color:#fff;font-size:20px;">✦</span>
+    const fullHtml = `<html><head><meta charset="utf-8"/><title>Report</title>
+      <style>
+        body { background:#fff; color:#0f172a; padding:36px; font-family:system-ui,sans-serif; }
+        .section { page-break-inside:auto; }
+        @media print { body { padding:10px; } .section { page-break-before:always; } .section:first-of-type { page-break-before:avoid; } }
+      </style></head><body>
+      <div style="padding-bottom:16px;border-b:2px solid #10b981;margin-bottom:30px;font-family:sans-serif;">
+        <h1 style="font-size:26px;font-weight:900;margin:0;">Pagiverse</h1>
+        <p style="font-size:11px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em;margin-top:2px;">Full Factual Extraction Dossier</p>
       </div>
-      <div>
-        <h1 style="font-size:28px;font-weight:900;color:#0f172a;letter-spacing:-0.04em;">Pagiverse</h1>
-        <p style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.15em;">Full Analysis Report — All 6 Domain Views</p>
-      </div>
-    </div>
-    <p style="font-size:12px;color:#94a3b8;font-weight:600;">Generated: ${new Date().toLocaleString()}</p>
-  </div>
-  <div class="section">
-    ${sectionHeader('📄', 'Page Summaries — ' + escHtml(dynamicSummaryHighlight), '#10b981')}
-    ${summaryHtml}
-  </div>
-  <div class="section">
-    ${sectionHeader('📘', 'Deep Insights Matrix', '#38bdf8')}
-    ${keyPointsHtml}
-  </div>
-  <div class="section">
-    ${sectionHeader('📅', escHtml(dynamicTab3Title), '#fbbf24')}
-    ${timelineHtml}
-  </div>
-  <div class="section">
-    ${sectionHeader('💬', escHtml(dynamicTab4Title), '#6366f1')}
-    ${quotesHtml}
-  </div>
-  <div class="section">
-    ${sectionHeader('⚡', 'Exam Cheat-Sheet', '#f43f5e')}
-    ${cheatHtml}
-  </div>
-  <div class="section">
-    ${sectionHeader('🃏', 'Active Flashcards', '#7c3aed')}
-    ${flashcardsHtml}
-  </div>
-</body>
-</html>`;
+      <div class="section">${sectionHeader('Page Summaries Document Matrix', '#10b981')}${summaryHtml}</div>
+      <div class="section">${sectionHeader('Deep Insights Core Matrix', '#0284c7')}${keyPointsHtml}</div>
+      <div class="section">${sectionHeader(dynamicTab3Title, '#d97706')}${timelineHtml}</div>
+      <div class="section">${sectionHeader(dynamicTab4Title, '#7c3aed')}${quotesHtml}</div>
+      <div class="section">${sectionHeader('Exam High-Weightage Cheat-Sheet', '#f43f5e')}${cheatHtml}</div>
+      <div class="section">${sectionHeader('Active Revision Flashcards', '#6b21a8')}${flashcardsHtml}</div>
+      </body></html>`;
 
-    const blob = new Blob([fullHtml], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const printWin = window.open(url, '_blank');
+    const printWin = window.open('', '_blank');
     if (printWin) {
-      printWin.onload = () => {
-        printWin.focus();
+      printWin.document.write(fullHtml);
+      printWin.document.close();
+      printWin.focus();
+      setTimeout(() => {
         printWin.print();
-      };
+        setDownloadingPdf(false);
+      }, 600);
+    } else {
+      setDownloadingPdf(false);
     }
-    setTimeout(() => { URL.revokeObjectURL(url); setDownloadingPdf(false); }, 3000);
   };
 
   const buildSummaryMap = (summaryText) => {
@@ -451,7 +402,9 @@ export default function Dashboard() {
         if (!pageMap[currentKey]) pageMap[currentKey] = [];
       } else {
         if (!pageMap[currentKey]) pageMap[currentKey] = [];
-        pageMap[currentKey].push(trimmed);
+        // CLEANED STAR PREFIX LOGIC HERE: Drops asterisk markers automatically for clean blocks look
+        const sanitizedLine = trimmed.replace(/^[\*\-\+]\s*/, '');
+        pageMap[currentKey].push(sanitizedLine);
       }
     });
     return pageMap;
@@ -463,12 +416,12 @@ export default function Dashboard() {
 
     const pageMap = buildSummaryMap(data.summary);
     const badgeColors = [
-      'bg-emerald-100 border-emerald-300 text-emerald-800',
-      'bg-teal-100 border-teal-300 text-teal-800',
-      'bg-cyan-100 border-cyan-300 text-cyan-800',
-      'bg-sky-100 border-sky-300 text-sky-800',
-      'bg-indigo-100 border-indigo-300 text-indigo-800',
-      'bg-violet-100 border-violet-300 text-violet-800',
+      'bg-emerald-50 border-emerald-200 text-emerald-800',
+      'bg-sky-50 border-sky-200 text-sky-800',
+      'bg-amber-50 border-amber-200 text-amber-800',
+      'bg-indigo-50 border-indigo-200 text-indigo-800',
+      'bg-rose-50 border-rose-200 text-rose-800',
+      'bg-purple-50 border-purple-200 text-purple-800',
     ];
 
     return (
@@ -479,6 +432,7 @@ export default function Dashboard() {
               <span className="opacity-70">✦</span> {header}
             </span>
             <div className="bg-white border border-slate-200 border-l-4 border-l-emerald-500 rounded-2xl p-6 shadow-sm">
+              {/* FIXED TEXT LAYOUT: Set to text-slate-950 font-black with line spacing rules like image 2 */}
               <p className="text-slate-950 font-black text-base md:text-lg leading-relaxed whitespace-pre-line tracking-wide">
                 {pageMap[header].join('\n\n')}
               </p>
@@ -503,7 +457,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 selection:bg-emerald-200 p-4 md:p-6" style={{ fontFamily: "'DM Sans', 'Outfit', system-ui, sans-serif" }}>
 
-      {/* ── NAVBAR ── */}
+      {/* ── FIXED NAVBAR — BRAND NAME IS ONLY PAGIVERSE ── */}
       <header className="flex justify-between items-center bg-white border border-slate-200 rounded-2xl px-5 py-4 mb-6 shadow-sm">
         <div className="flex items-center gap-3">
           <button
@@ -524,19 +478,19 @@ export default function Dashboard() {
             className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-black px-5 py-2.5 rounded-xl shadow-md hover:shadow-emerald-400/30 hover:from-emerald-600 hover:to-teal-600 transition-all disabled:opacity-60"
           >
             <Download size={14} />
-            {downloadingPdf ? 'Compiling...' : 'Download PDF Report'}
+            {downloadingPdf ? 'Compiling Report...' : 'Download PDF Report'}
           </button>
         )}
       </header>
 
-      {/* ── MAIN GRID ── */}
+      {/* ── WORKSPACE CORE GRID ── */}
       <div className={`max-w-[1640px] mx-auto grid gap-6 transition-all ${sidebarOpen ? 'grid-cols-1 lg:grid-cols-[300px_1fr]' : 'grid-cols-1'}`}>
 
-        {/* ── LEFT SIDEBAR ── */}
+        {/* ── LEFT SIDEBAR CONTAINER ── */}
         {sidebarOpen && (
           <div className="flex flex-col gap-5">
 
-            {/* UPLOAD ZONE */}
+            {/* UPLOAD LAYER ZONE */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
               <h3 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
                 <Upload size={13} className="text-emerald-500" /> Feed Core Document PDF
@@ -576,7 +530,7 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* COLLAPSIBLE NAV LIST SLIDER */}
+            {/* COLLAPSIBLE SLIDER CONTROLLER NAVIGATION */}
             {data && (
               <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                 <button
@@ -596,7 +550,7 @@ export default function Dashboard() {
                           onClick={() => setActiveTab(key)}
                           className={`w-full text-left px-3.5 py-3 rounded-xl border transition-all flex items-center justify-between group ${
                             isActive
-                              ? `${pal.bg} ${pal.border} shadow-sm`
+                              ? `${pal.bg} ${pal.border} shadow-sm font-black`
                               : 'bg-slate-50/50 border-transparent hover:bg-slate-50 hover:border-slate-200'
                           }`}
                         >
@@ -622,7 +576,7 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* ANALYSIS ARCHIVE REPOSITORY */}
+            {/* REPOSITORY ARCHIVE STORAGE PANEL */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] flex items-center gap-1.5">
@@ -662,7 +616,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ── LOADING PANEL ── */}
+        {/* ── LOADING CORE VIEWPORT ── */}
         {loading && (
           <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm space-y-6">
             <div className="max-w-sm mx-auto space-y-2">
@@ -684,11 +638,11 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ── RESULTS PANEL ── */}
+        {/* ── DISPLAY WORKSPACE LAYER ── */}
         {data && !loading && (
           <div ref={resultsRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
 
-            {/* PANEL TOP STATUS BAR */}
+            {/* VIEW STATUS PIN BAR */}
             <div className="bg-slate-50 border-b border-slate-200 px-6 py-3 flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <div className="flex-1 min-w-0">
@@ -698,10 +652,10 @@ export default function Dashboard() {
               <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
             </div>
 
-            {/* CONTENT GRID */}
+            {/* SPLIT FRAMEWORK WORKSPACE */}
             <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] min-h-[620px]">
 
-              {/* INNER TAB SIDEBAR */}
+              {/* ACTIVE TABS GRAPHICAL VIEW */}
               <aside className="bg-slate-50/60 border-r border-slate-100 p-3 space-y-1.5 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
                 {tabs.map(({ key, icon: Icon, label, sub, pal }) => {
                   const isActive = activeTab === key;
@@ -711,15 +665,15 @@ export default function Dashboard() {
                       onClick={() => setActiveTab(key)}
                       className={`w-full text-left px-3.5 py-3 rounded-xl border transition-all flex items-center justify-between group ${
                         isActive
-                          ? `${pal.bg} ${pal.border} shadow-sm`
+                          ? `${pal.bg} ${pal.border} shadow-sm font-black`
                           : 'bg-white/60 border-transparent hover:bg-white hover:border-slate-200'
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Icon size={14} className={isActive ? pal.label : 'text-slate-400'} />
                         <div className="truncate">
-                          <p className={`text-[11px] font-black tracking-tight truncate leading-tight ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>{label}</p>
-                          <p className={`text-[9px] font-semibold truncate leading-tight mt-0.5 ${isActive ? 'text-slate-400' : 'text-slate-300'}`}>{sub}</p>
+                          <p className={`text-[11px] font-black tracking-tight truncate leading-tight ${isActive ? 'text-slate-900 font-black' : 'text-slate-600'}`}>{label}</p>
+                          <p className={`text-[9px] font-semibold truncate leading-tight mt-0.5 ${isActive ? 'text-slate-500' : 'text-slate-300'}`}>{sub}</p>
                         </div>
                       </div>
                       {key === 'flashcards' ? (
@@ -734,10 +688,10 @@ export default function Dashboard() {
                 })}
               </aside>
 
-              {/* MAIN CONTENT VIEWPORT */}
+              {/* MAIN REFLUSH VIEWPORT DISPLAY MAIN */}
               <main className="p-6 md:p-8 bg-white overflow-y-auto">
 
-                {/* PAGE SUMMARIES */}
+                {/* PAGE SUMMARIES FRAME LAYER */}
                 {activeTab === 'summary' && (
                   <div className="space-y-5">
                     <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
@@ -749,7 +703,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* DEEP INSIGHTS MATRIX */}
+                {/* DEEP INSIGHTS PANE */}
                 {activeTab === 'key_points' && (
                   <div className="space-y-4">
                     <div className="pb-3 border-b border-slate-100 mb-5">
@@ -768,7 +722,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* TIMELINE */}
+                {/* TIMELINE PANE */}
                 {activeTab === 'timeline' && (
                   <div className="space-y-4">
                     <div className="pb-3 border-b border-slate-100 mb-5">
@@ -787,7 +741,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* QUOTES / LAWS / ACTS */}
+                {/* QUOTES AND STATUTORY LAWS PANE */}
                 {activeTab === 'quotes' && (
                   <div className="space-y-4">
                     <div className="pb-3 border-b border-slate-100 mb-5">
@@ -806,7 +760,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* CHEAT SHEET */}
+                {/* HIGH WEIGHTAGE COMPILER CHEAT SHEET PANE */}
                 {activeTab === 'cheat_sheet' && (
                   <div className="space-y-4">
                     <div className="pb-3 border-b border-slate-100 mb-5">
@@ -825,7 +779,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* FLASHCARDS */}
+                {/* ACTIVE REVISION FLASHCARDS PANEL */}
                 {activeTab === 'flashcards' && (
                   <div className="space-y-5">
                     <div className="pb-3 border-b border-slate-100 mb-5 flex items-center justify-between">
