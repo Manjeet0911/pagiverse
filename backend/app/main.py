@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app import models, schemas, database, services
 
-# CORE STRUCTURAL UPDATE: Server boot sequence wrapped in a safe block to prevent reloader crashes.
 try:
     models.Base.metadata.create_all(bind=database.engine)
     print("--- SUCCESS: Database schemas verified and synced safely ---")
@@ -29,19 +28,12 @@ app.add_middleware(
 
 os.makedirs("temp_uploads", exist_ok=True)
 
-# Helper function to asynchronously process individual chunk tasks
 async def process_single_chunk_async(chunk_text: str, chunk_index: int):
-    """
-    Wraps the AI insight generation service in an async thread loop 
-    with built-in exponential backoff retry matrix to bypass 503 errors.
-    """
     max_retries = 3
     for attempt in range(max_retries):
         try:
             print(f"--> Initializing Parallel Gemini Task for Chunk Node #{chunk_index + 1} (Attempt {attempt + 1})")
-            
-            # 🔥 FIX 503: Give Gemini a slight breathing window between burst requests
-            await asyncio.sleep(attempt * 1.5 + 0.5)
+            await asyncio.sleep(attempt * 2.0 + 0.5)
             
             loop = asyncio.get_event_loop()
             raw_insights = await loop.run_in_executor(None, services.generate_insights_from_ai, chunk_text)
@@ -65,30 +57,54 @@ async def process_pdf_task_async(doc_id: str, file_path: str):
     try:
         print(f"--- Asynchronous High-Performance Chunk Ingestion for ID: {doc_id} ---")
         
-        # 1. Extract raw textual streams from target document binary data
-        full_text_data = services.extract_text_from_pdf(file_path)
+        # 1. Fetch data through the structured page array extractor
+        extracted_pages = services.extract_text_from_pdf(file_path)
+        if not extracted_pages:
+            raise Exception("No readable text found inside source PDF file bounds.")
+
+        # 2. SMART THRESHOLD VIEW ENGINE: Filter and pack pages dynamically
+        filtered_page_blocks = []
+        carry_over_text = ""
         
-        # 2. CHUNKING ENGINE LOGIC: Split long text blocks into smaller 5-page token constraints
-        paragraphs = full_text_data.split('\n')
+        for p in extracted_pages:
+            p_text = p["text"]
+            p_num = p["page_num"]
+            word_count = len(p_text.split())
+            
+            # Drop Mechanism: Skip dead spaces or junk pages with less than 15 words entirely
+            if word_count < 15:
+                print(f"--> [Smart Filter] Dropping Page {p_num} (Words: {word_count}) - Noise isolated successfully.")
+                continue
+                
+            # Merge Mechanism: If word count is thin (15 to 50 words), bundle it seamlessly with next valid block
+            if word_count < 50:
+                print(f"--> [Smart Filter] Merging Page {p_num} (Words: {word_count}) due to low data layout limits.")
+                carry_over_text += f"\n--- PAGE {p_num} ---\n{p_text}\n"
+                continue
+                
+            # Valid Core Data Node
+            final_block_text = f"{carry_over_text}\n--- PAGE {p_num} ---\n{p_text}\n"
+            filtered_page_blocks.append(final_block_text)
+            carry_over_text = "" # Reset matrix block tracker
+            
+        # Push any remaining carry over block safely into the last valid array window
+        if carry_over_text and filtered_page_blocks:
+            filtered_page_blocks[-1] += f"\n{carry_over_text}"
+        elif carry_over_text:
+            filtered_page_blocks.append(carry_over_text)
+
+        # 3. COMPACT PACKER: Group everything into maximum 2 or 3 requests to preserve daily quota
+        # Roughly 8-10 dense pages per block represents an absolute sweet spot for Gemini token constraints
         chunks = []
-        current_chunk = []
-        current_word_count = 0
-        
-        for para in paragraphs:
-            current_chunk.append(para)
-            current_word_count += len(para.split())
-            if current_word_count >= 1500:
-                chunks.append("\n".join(current_chunk))
-                current_chunk = []
-                current_word_count = 0
-        if current_chunk:
-            chunks.append("\n".join(current_chunk))
+        chunk_size = 10 
+        for i in range(0, len(filtered_page_blocks), chunk_size):
+            block_batch = filtered_page_blocks[i:i + chunk_size]
+            chunks.append("\n\n".join(block_batch))
 
-        print(f"--- Document Vector divided dynamically into {len(chunks)} Chunks. Spawning Parallel AI Workers ---")
+        print(f"--- Document Vector divided dynamically into {len(chunks)} Balanced Requests. Spawning Concurrency Pool ---")
 
-        # 3. SEMAPHORE ENGINE CONCURRENCY: Limit to 2 concurrent burst threads to strictly prevent Gemini 503 Spikes
+        # 4. CONCURRENT DISPATCH BLOCK
         semaphore = asyncio.Semaphore(2)
-        
         async def bounded_chunk_worker(chunk_text, index):
             async with semaphore:
                 return await process_single_chunk_async(chunk_text, index)
@@ -96,7 +112,7 @@ async def process_pdf_task_async(doc_id: str, file_path: str):
         tasks = [bounded_chunk_worker(chunk, idx) for idx, chunk in enumerate(chunks)]
         insights_results = await asyncio.gather(*tasks)
 
-        # 4. MASTER ANALYSIS AGGREGATOR: Merge fragmented matrices securely back into single dataset fields
+        # 5. MASTER ANALYSIS AGGREGATOR
         aggregated_summary_blocks = []
         merged_key_points = []
         merged_timeline_dates = []
@@ -104,14 +120,13 @@ async def process_pdf_task_async(doc_id: str, file_path: str):
         merged_cheat_sheet = []
         merged_flashcards = []
 
-        for idx, chunk_data in enumerate(insights_results):
+        for chunk_data in insights_results:
             if not chunk_data:
                 continue
                 
             chunk_summary = chunk_data.get("summary")
-            if chunk_summary:
-                # 🔥 FIX CRASH: Changed JS String() constructor mapping to pure Python native str() handler string injection
-                aggregated_summary_blocks.append(f"### PAGE BLOCK {str(idx+1).zfill(2)} INSIGHTS\n{chunk_summary.strip()}")
+            if chunk_summary and chunk_summary.strip():
+                aggregated_summary_blocks.append(chunk_summary.strip())
             
             if isinstance(chunk_data.get("key_points"), list):
                 merged_key_points.extend(chunk_data["key_points"])
@@ -125,7 +140,7 @@ async def process_pdf_task_async(doc_id: str, file_path: str):
                 merged_flashcards.extend(chunk_data["flashcards"])
 
         final_summary_string = "\n\n".join(aggregated_summary_blocks)
-        if not final_summary_string:
+        if not final_summary_string.strip():
             final_summary_string = "Processing block completed. Structural data isolated."
 
         print(f"--- AI Grid Sync Successful. Spawning Fresh Database Commit for ID: {doc_id} ---")
@@ -180,7 +195,6 @@ async def process_pdf_task_async(doc_id: str, file_path: str):
                 pass
 
 def process_pdf_task(doc_id: str, file_path: str):
-    """Bridge interface matching older synchronous signature to fire async handler chain natively."""
     asyncio.run(process_pdf_task_async(doc_id, file_path))
 
 @app.post("/upload", response_model=schemas.DocumentResponse)
