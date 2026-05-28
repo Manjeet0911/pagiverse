@@ -212,6 +212,7 @@ export default function Dashboard() {
     }, 12000);
   };
 
+  // 🔥 HIGH-PERFORMANCE SCHEDULER REQUEST POLLING ENGINE (PREVENTS FORCED REFLOW BREAKS)
   const pollAnalytics = async (docId, fileName) => {
     let completed = false;
     let attempts = 0;
@@ -220,7 +221,7 @@ export default function Dashboard() {
     while (!completed && attempts < maxAttempts) {
       try {
         setUploadProgress(40 + Math.min(attempts * 0.5, 59));
-        await new Promise((r) => setTimeout(r, 3000));
+        await new Promise((r) => setTimeout(r, 3500));
         
         const res = await fetch(`${API_BASE_URL}/document/${docId}`, {
           headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
@@ -239,25 +240,29 @@ export default function Dashboard() {
               cheat_sheet: Array.isArray(result.cheat_sheet) ? result.cheat_sheet : [],
               flashcards: Array.isArray(result.flashcards) ? result.flashcards : [],
             };
-            setData(parsedData);
-            const newHistoryItem = { id: docId, filename: fileName, analytics: parsedData };
-            setHistoryList((prev) => {
-              const updated = [newHistoryItem, ...prev.filter((item) => item.id !== docId)];
-              localStorage.setItem('pagiverse_tabbed_private_history', JSON.stringify(updated));
-              return updated;
+            
+            // 🛑 USE REQUESTANIMATIONFRAME TO SAFELY COMMIT STATE WITHOUT BLOCKING RENDER FLUIDITY
+            window.requestAnimationFrame(() => {
+              setData(parsedData);
+              const newHistoryItem = { id: docId, filename: fileName, analytics: parsedData };
+              setHistoryList((prev) => {
+                const updated = [newHistoryItem, ...prev.filter((item) => item.id !== docId)];
+                localStorage.setItem('pagiverse_tabbed_private_history', JSON.stringify(updated));
+                return updated;
+              });
+              setUploadProgress(100);
             });
           }
-          setUploadProgress(100);
           completed = true;
           setTimeout(() => {
             if (resultsRef.current) resultsRef.current.scrollIntoView({ behavior: 'smooth' });
-          }, 400);
+          }, 500);
         } else if (statusCheck.status === 'failed') {
           alert('Analytics Engine processing exception on Render container layer.');
           completed = true;
         }
       } catch (err) {
-        console.error("Polling interruption:", err);
+        console.error("Polling interruption status exception:", err);
       }
       attempts++;
     }
@@ -359,7 +364,6 @@ export default function Dashboard() {
               <span className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] px-4 py-2 rounded-xl border ${badgeColors[index % badgeColors.length]}`}>
                 <span className="opacity-70">✦</span> {header}
               </span>
-              {/* 🛑 BALANCED BALANCED TEXT DESIGN LEVEL MATCHED HERE */}
               <div className="bg-white border border-slate-200 border-l-4 border-l-emerald-500 rounded-2xl p-6 shadow-sm">
                 <p className="text-slate-800 font-semibold text-sm md:text-[15px] leading-relaxed text-justify tracking-normal whitespace-normal">
                   {flatTextSummary}
@@ -560,7 +564,6 @@ export default function Dashboard() {
         {/* ── RESULTS PANEL ── */}
         {data && !loading && (
           <div ref={resultsRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            {/* 🛑 BANNER COMPLETELY REMOVED FROM RENDER REEL HERE */}
             <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] min-h-[620px]">
 
               {/* INNER TAB SIDEBAR */}
