@@ -33,23 +33,32 @@ os.makedirs("temp_uploads", exist_ok=True)
 async def process_single_chunk_async(chunk_text: str, chunk_index: int):
     """
     Wraps the AI insight generation service in an async thread loop 
-    to prevent blocking the central thread pool.
+    with built-in exponential backoff retry matrix to bypass 503 errors.
     """
-    try:
-        print(f"--> Initializing Parallel Gemini Task for Chunk Node #{chunk_index + 1}")
-        # Running the synchronous generate_insights_from_ai function inside an isolated async executor thread
-        loop = asyncio.get_event_loop()
-        raw_insights = await loop.run_in_executor(None, services.generate_insights_from_ai, chunk_text)
-        
-        if isinstance(raw_insights, str):
-            try:
-                return json.loads(raw_insights.strip())
-            except Exception:
-                return {"summary": raw_insights}
-        return raw_insights if isinstance(raw_insights, dict) else {}
-    except Exception as chunk_err:
-        print(f"!!! Exception triggered inside Chunk Worker Node #{chunk_index + 1}: {str(chunk_err)}")
-        return {}
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            print(f"--> Initializing Parallel Gemini Task for Chunk Node #{chunk_index + 1} (Attempt {attempt + 1})")
+            
+            # 🔥 FIX 503: Give Gemini a slight breathing window between burst requests
+            await asyncio.sleep(attempt * 1.5 + 0.5)
+            
+            loop = asyncio.get_event_loop()
+            raw_insights = await loop.run_in_executor(None, services.generate_insights_from_ai, chunk_text)
+            
+            if isinstance(raw_insights, str):
+                try:
+                    return json.loads(raw_insights.strip())
+                except Exception:
+                    return {"summary": raw_insights}
+            return raw_insights if isinstance(raw_insights, dict) else {}
+            
+        except Exception as chunk_err:
+            print(f"!!! Warning on Chunk Node #{chunk_index + 1} Attempt {attempt + 1}: {str(chunk_err)}")
+            if attempt == max_retries - 1:
+                print(f"!!! Fatal: Chunk Node #{chunk_index + 1} failed all retries.")
+                return {}
+    return {}
 
 async def process_pdf_task_async(doc_id: str, file_path: str):
     db = database.SessionLocal()
@@ -60,8 +69,6 @@ async def process_pdf_task_async(doc_id: str, file_path: str):
         full_text_data = services.extract_text_from_pdf(file_path)
         
         # 2. CHUNKING ENGINE LOGIC: Split long text blocks into smaller 5-page token constraints
-        # Splitting content using generic newline/page boundaries. 
-        # (If your services has a page iterator, you can optimize this chunk split)
         paragraphs = full_text_data.split('\n')
         chunks = []
         current_chunk = []
@@ -70,7 +77,6 @@ async def process_pdf_task_async(doc_id: str, file_path: str):
         for para in paragraphs:
             current_chunk.append(para)
             current_word_count += len(para.split())
-            # 1500 words limit matches roughly 4-5 text-dense book pages seamlessly
             if current_word_count >= 1500:
                 chunks.append("\n".join(current_chunk))
                 current_chunk = []
@@ -80,9 +86,8 @@ async def process_pdf_task_async(doc_id: str, file_path: str):
 
         print(f"--- Document Vector divided dynamically into {len(chunks)} Chunks. Spawning Parallel AI Workers ---")
 
-        # 3. SEMAPHORE ENGINE CONCURRENCY: Run parallel execution blocks concurrently using asyncio
-        # Limit to 3 concurrent tasks to protect API rate limits (RPM) safely
-        semaphore = asyncio.Semaphore(3)
+        # 3. SEMAPHORE ENGINE CONCURRENCY: Limit to 2 concurrent burst threads to strictly prevent Gemini 503 Spikes
+        semaphore = asyncio.Semaphore(2)
         
         async def bounded_chunk_worker(chunk_text, index):
             async with semaphore:
@@ -103,13 +108,11 @@ async def process_pdf_task_async(doc_id: str, file_path: str):
             if not chunk_data:
                 continue
                 
-            # Aggregate structural continuous textbook summaries
             chunk_summary = chunk_data.get("summary")
             if chunk_summary:
-                # Append labeled headers so frontend maps paragraph splits perfectly
-                aggregated_summary_blocks.append(f"### PAGE BLOCK {String(idx+1).padStart(2, '0')} INSIGHTS\n{chunk_summary.strip()}")
+                # 🔥 FIX CRASH: Changed JS String() constructor mapping to pure Python native str() handler string injection
+                aggregated_summary_blocks.append(f"### PAGE BLOCK {str(idx+1).zfill(2)} INSIGHTS\n{chunk_summary.strip()}")
             
-            # Extend lists elements safely
             if isinstance(chunk_data.get("key_points"), list):
                 merged_key_points.extend(chunk_data["key_points"])
             if isinstance(chunk_data.get("timeline_dates"), list):
