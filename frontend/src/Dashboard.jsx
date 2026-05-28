@@ -93,7 +93,6 @@ export default function Dashboard() {
   const [dynamicTab3Sub, setDynamicTab3Sub] = useState('Date historical structures');
   const [dynamicTab4Title, setDynamicTab4Title] = useState('Quotes, Laws & Acts');
   const [dynamicTab4Sub, setDynamicTab4Sub] = useState('Verbatim high weightage indices');
-  const [dynamicSummaryHighlight, setDynamicSummaryHighlight] = useState('Comprehensive Core Overview');
 
   const fileInputRef = useRef(null);
   const resultsRef = useRef(null);
@@ -132,25 +131,21 @@ export default function Dashboard() {
       setDynamicTab3Sub('Algorithmic execution sequences');
       setDynamicTab4Title('Complexity Rules & Logic');
       setDynamicTab4Sub('Time/space complexity metrics');
-      setDynamicSummaryHighlight('Data Science & Algorithmic Paradigm Isolated');
     } else if (joinedContent.includes('theorem') || joinedContent.includes('proof') || joinedContent.includes('induction') || joinedContent.includes('discrete') || joinedContent.includes('math')) {
       setDynamicTab3Title('Sequential Steps & Proofs');
       setDynamicTab3Sub('Logical structure proofs sequences');
       setDynamicTab4Title('Axioms, Theorems & Corollaries');
       setDynamicTab4Sub('Core properties structural formulas');
-      setDynamicSummaryHighlight('Mathematical Discrete Analytical Concept Isolated');
     } else if (joinedContent.includes('kernel') || joinedContent.includes('scheduling') || joinedContent.includes('operating') || joinedContent.includes('protocol') || joinedContent.includes('memory') || joinedContent.includes('process')) {
       setDynamicTab3Title('System State Chronology');
       setDynamicTab3Sub('CPU process scheduling timelines');
       setDynamicTab4Title('Standards, Protocols & Limits');
       setDynamicTab4Sub('RFC standards and system deadlocks');
-      setDynamicSummaryHighlight('Architecture & Core Operating System Framework Isolated');
     } else {
       setDynamicTab3Title('Timeline & Chronology');
       setDynamicTab3Sub('Date historical structures');
       setDynamicTab4Title('Quotes, Laws & Acts');
       setDynamicTab4Sub('Verbatim high weightage indices');
-      setDynamicSummaryHighlight('Comprehensive Core Overview');
     }
   }, [data]);
 
@@ -295,26 +290,39 @@ export default function Dashboard() {
     if (!summaryText) return {};
     const rawLines = summaryText.split('\n');
     const pageMap = {};
-    let currentKey = 'GENERAL OVERVIEW';
+    let currentKey = 'PAGE 01 INSIGHTS';
     let pageCount = 1;
+    let hasKeysFound = false;
+
     rawLines.forEach((line) => {
       const trimmed = line.trim();
       if (!trimmed) return;
+
       const lower = trimmed.toLowerCase();
       if (lower.startsWith('page') || lower.startsWith('### page') || lower.startsWith('## page')) {
         const match = trimmed.match(/\d+/);
         const pageNum = match ? String(match[0]).padStart(2, '0') : String(pageCount++).padStart(2, '0');
         currentKey = `PAGE ${pageNum} INSIGHTS`;
+        hasKeysFound = true;
         if (!pageMap[currentKey]) pageMap[currentKey] = [];
       } else {
         if (!pageMap[currentKey]) pageMap[currentKey] = [];
-        // CLEANED: Stripped both bullet points stars (*) and clean dynamic leading spaces
         const sanitizedLine = trimmed.replace(/^[\*\-\+]\s*/, '').trim();
         if (sanitizedLine) {
           pageMap[currentKey].push(sanitizedLine);
         }
       }
     });
+
+    if (!hasKeysFound && rawLines.length > 0) {
+      const fallbackKey = 'PAGE 01 INSIGHTS';
+      pageMap[fallbackKey] = [];
+      rawLines.forEach(line => {
+        const cleaned = line.trim().replace(/^[\*\-\+]\s*/, '').trim();
+        if (cleaned) pageMap[fallbackKey].push(cleaned);
+      });
+    }
+
     return pageMap;
   };
 
@@ -334,19 +342,21 @@ export default function Dashboard() {
 
     return (
       <div className="space-y-6">
-        {Object.keys(pageMap).map((header, index) => (
-          <div key={index} className="space-y-3">
-            <span className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] px-4 py-2 rounded-xl border ${badgeColors[index % badgeColors.length]}`}>
-              <span className="opacity-70">✦</span> {header}
-            </span>
-            {/* FIXED TYPOGRAPHY: Removed spacing segments and bound fonts into tight natural text block format */}
-            <div className="bg-white border border-slate-200 border-l-4 border-l-emerald-500 rounded-2xl p-6 shadow-sm">
-              <p className="text-slate-900 font-semibold text-sm md:text-base leading-relaxed text-justify tracking-normal whitespace-pre-line">
-                {pageMap[header].join(' ')}
-              </p>
+        {Object.keys(pageMap).map((header, index) => {
+          if (pageMap[header].length === 0) return null;
+          return (
+            <div key={index} className="space-y-3">
+              <span className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] px-4 py-2 rounded-xl border ${badgeColors[index % badgeColors.length]}`}>
+                <span className="opacity-70">✦</span> {header}
+              </span>
+              <div className="bg-white border border-slate-200 border-l-4 border-l-emerald-500 rounded-2xl p-6 shadow-sm">
+                <p className="text-slate-900 font-semibold text-sm md:text-base leading-relaxed text-justify tracking-normal whitespace-pre-line">
+                  {pageMap[header].join(' ')}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
@@ -365,7 +375,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 selection:bg-emerald-200 p-4 md:p-6" style={{ fontFamily: "'DM Sans', 'Outfit', system-ui, sans-serif" }}>
 
-      {/* ── NAVBAR — REMOVED THE EMBEDDED DOWNLOAD BUTTON PER INSTRUCTIONS ── */}
+      {/* ── NAVBAR ── */}
       <header className="flex justify-between items-center bg-white border border-slate-200 rounded-2xl px-5 py-4 mb-6 shadow-sm">
         <div className="flex items-center gap-3">
           <button
@@ -591,11 +601,6 @@ export default function Dashboard() {
                 {/* PAGE SUMMARIES */}
                 {activeTab === 'summary' && (
                   <div className="space-y-5">
-                    <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                      <span className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg">
-                        💡 {dynamicSummaryHighlight}
-                      </span>
-                    </div>
                     {renderSummaryBlocks()}
                   </div>
                 )}
@@ -603,11 +608,6 @@ export default function Dashboard() {
                 {/* DEEP INSIGHTS MATRIX */}
                 {activeTab === 'key_points' && (
                   <div className="space-y-4">
-                    <div className="pb-3 border-b border-slate-100 mb-5">
-                      <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
-                        <BookOpen size={16} className="text-sky-500" /> Deep Insights Matrix
-                      </h2>
-                    </div>
                     <div className="grid grid-cols-1 gap-3">
                       {data.key_points.map((item, idx) => (
                         <div key={idx} className="flex gap-4 p-4 bg-sky-50 border border-sky-200 border-l-4 border-l-sky-500 rounded-2xl">
@@ -622,11 +622,6 @@ export default function Dashboard() {
                 {/* TIMELINE */}
                 {activeTab === 'timeline' && (
                   <div className="space-y-4">
-                    <div className="pb-3 border-b border-slate-100 mb-5">
-                      <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
-                        <Calendar size={16} className="text-amber-500" /> {dynamicTab3Title}
-                      </h2>
-                    </div>
                     <div className="border-l-2 border-amber-300 pl-5 ml-2 space-y-3 relative">
                       {data.timeline_dates.map((dateEvent, idx) => (
                         <div key={idx} className="relative p-4 bg-amber-50 border border-amber-200 border-l-4 border-l-amber-400 rounded-xl shadow-sm">
@@ -641,11 +636,6 @@ export default function Dashboard() {
                 {/* QUOTES / LAWS / ACTS */}
                 {activeTab === 'quotes' && (
                   <div className="space-y-4">
-                    <div className="pb-3 border-b border-slate-100 mb-5">
-                      <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
-                        <Layers size={16} className="text-indigo-500" /> {dynamicTab4Title}
-                      </h2>
-                    </div>
                     <div className="grid grid-cols-1 gap-4">
                       {data.historians_quotes.map((quoteText, idx) => (
                         <div key={idx} className="relative p-5 bg-indigo-50 border border-indigo-200 border-l-4 border-l-indigo-500 rounded-2xl">
@@ -660,11 +650,6 @@ export default function Dashboard() {
                 {/* CHEAT SHEET */}
                 {activeTab === 'cheat_sheet' && (
                   <div className="space-y-4">
-                    <div className="pb-3 border-b border-slate-100 mb-5">
-                      <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
-                        <Sparkles size={16} className="text-rose-500" /> Exam Cheat-Sheet
-                      </h2>
-                    </div>
                     <div className="grid grid-cols-1 gap-3">
                       {cheatSheetArray.map((point, idx) => (
                         <div key={idx} className="flex gap-3 p-4 bg-rose-50 border border-rose-200 border-l-4 border-l-rose-500 rounded-2xl items-start">
@@ -679,14 +664,6 @@ export default function Dashboard() {
                 {/* FLASHCARDS */}
                 {activeTab === 'flashcards' && (
                   <div className="space-y-5">
-                    <div className="pb-3 border-b border-slate-100 mb-5 flex items-center justify-between">
-                      <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
-                        <HelpCircle size={16} className="text-purple-500" /> Active Flashcards
-                      </h2>
-                      <span className="text-[10px] font-black text-purple-700 bg-purple-100 border border-purple-200 px-3 py-1 rounded-full">
-                        {data.flashcards?.length || 0} CARDS
-                      </span>
-                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                       {data.flashcards.map((cardItem, idx) => (
                         <Flashcard key={idx} index={idx} question={cardItem.question} answer={cardItem.answer} />
