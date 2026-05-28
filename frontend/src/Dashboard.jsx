@@ -3,7 +3,7 @@ import {
   FileText, Upload, Sparkles, Calendar, BookOpen,
   Layers, HelpCircle, CheckCircle2, ChevronRight,
   Check, ArrowRight, X, Trash2, History,
-  PanelLeftClose, PanelLeftOpen, Download, ChevronDown, ChevronUp
+  PanelLeftClose, PanelLeftOpen, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 // 🚀 PRODUCTION LIVE BACKEND CLUSTER ENDPOINT
@@ -88,7 +88,6 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [navCollapsed, setNavCollapsed] = useState(false);
   const [historyList, setHistoryList] = useState([]);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const [dynamicTab3Title, setDynamicTab3Title] = useState('Timeline & Chronology');
   const [dynamicTab3Sub, setDynamicTab3Sub] = useState('Date historical structures');
@@ -292,99 +291,6 @@ export default function Dashboard() {
     }
   };
 
-  // ── VISUAL NATIVE PDF PRINT ENGINE ──
-  const handleDownloadPdfReport = () => {
-    if (!data) return;
-    setDownloadingPdf(true);
-
-    const cheatArr = data.cheat_sheet?.length > 0 ? data.cheat_sheet : data.key_points?.slice(0, 10) || [];
-    const summaryBlocks = buildSummaryMap(data.summary);
-    const escHtml = (str) => String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^\s*[\*\-\+]\s*/gm, '');
-
-    const summaryHtml = Object.keys(summaryBlocks).map((header) => `
-      <div style="margin-bottom:24px;page-break-inside:avoid;">
-        <div style="display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:11px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;padding:5px 12px;border-radius:8px;margin-bottom:8px;font-family:sans-serif;">✨ ${escHtml(header)}</div>
-        <div style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid #10b981;border-radius:12px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-          <p style="color:#030712;font-size:15px;font-weight:800;line-height:1.7;white-space:pre-line;margin:0;font-family:sans-serif;">${escHtml(summaryBlocks[header].join('\n\n'))}</p>
-        </div>
-      </div>
-    `).join('');
-
-    const keyPointsHtml = data.key_points.map((item, idx) => `
-      <div style="background:#f0f9ff;border:1px solid #e0f2fe;border-left:4px solid #0284c7;border-radius:12px;padding:16px;margin-bottom:12px;display:flex;gap:12px;page-break-inside:avoid;font-family:sans-serif;">
-        <span style="color:#0284c7;font-weight:900;font-size:13px;min-width:20px;">${String(idx+1).padStart(2,'0')}.</span>
-        <p style="color:#030712;font-size:14px;font-weight:800;line-height:1.6;margin:0;">${escHtml(item)}</p>
-      </div>
-    `).join('');
-
-    const timelineHtml = data.timeline_dates.map((event, idx) => `
-      <div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #d97706;border-radius:12px;padding:16px;margin-bottom:12px;page-break-inside:avoid;font-family:sans-serif;">
-        <p style="color:#451a03;font-size:14px;font-weight:800;line-height:1.6;margin:0;">${escHtml(event)}</p>
-      </div>
-    `).join('');
-
-    const quotesHtml = data.historians_quotes.map(q => `
-      <div style="background:#f5f3ff;border:1px solid #ede9fe;border-left:4px solid #7c3aed;border-radius:12px;padding:18px;margin-bottom:12px;position:relative;page-break-inside:avoid;font-family:sans-serif;">
-        <p style="color:#1e1b4b;font-size:14px;font-weight:800;line-height:1.6;margin:0;font-style:italic;">"${escHtml(q)}"</p>
-      </div>
-    `).join('');
-
-    const cheatHtml = cheatArr.map(point => `
-      <div style="background:#fff1f2;border:1px solid #ffe4e6;border-left:4px solid #f43f5e;border-radius:12px;padding:16px;margin-bottom:12px;page-break-inside:avoid;font-family:sans-serif;">
-        <p style="color:#030712;font-size:14px;font-weight:800;line-height:1.6;margin:0;">${escHtml(point)}</p>
-      </div>
-    `).join('');
-
-    const flashcardsHtml = data.flashcards.map((card, idx) => `
-      <div style="display:flex;gap:12px;margin-bottom:14px;page-break-inside:avoid;font-family:sans-serif;">
-        <div style="flex:1;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
-          <span style="font-size:9px;font-weight:900;color:#64748b;letter-spacing:0.1em;display:block;margin-bottom:4px;">Q${String(idx+1).padStart(2,'0')}</span>
-          <p style="font-size:13px;font-weight:800;color:#0f172a;margin:0;">${escHtml(card.question)}</p>
-        </div>
-        <div style="flex:1;background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:14px;">
-          <span style="font-size:9px;font-weight:900;color:#7c3aed;letter-spacing:0.1em;display:block;margin-bottom:4px;">ANSWER</span>
-          <p style="font-size:13px;font-weight:800;color:#1e1b4b;margin:0;">${escHtml(card.answer)}</p>
-        </div>
-      </div>
-    `).join('');
-
-    const sectionHeader = (title, color) =>
-      `<div style="border-bottom:2px solid ${color};padding-bottom:6px;margin-top:32px;margin-bottom:16px;page-break-after:avoid;font-family:sans-serif;">
-        <h2 style="font-size:18px;font-weight:900;color:#0f172a;margin:0;text-transform:uppercase;letter-spacing:0.02em;">${title}</h2>
-      </div>`;
-
-    const fullHtml = `<html><head><meta charset="utf-8"/><title>Report</title>
-      <style>
-        body { background:#fff; color:#0f172a; padding:36px; font-family:system-ui,sans-serif; }
-        .section { page-break-inside:auto; }
-        @media print { body { padding:10px; } .section { page-break-before:always; } .section:first-of-type { page-break-before:avoid; } }
-      </style></head><body>
-      <div style="padding-bottom:16px;border-b:2px solid #10b981;margin-bottom:30px;font-family:sans-serif;">
-        <h1 style="font-size:26px;font-weight:900;margin:0;">Pagiverse</h1>
-        <p style="font-size:11px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em;margin-top:2px;">Full Factual Extraction Dossier</p>
-      </div>
-      <div class="section">${sectionHeader('Page Summaries Document Matrix', '#10b981')}${summaryHtml}</div>
-      <div class="section">${sectionHeader('Deep Insights Core Matrix', '#0284c7')}${keyPointsHtml}</div>
-      <div class="section">${sectionHeader(dynamicTab3Title, '#d97706')}${timelineHtml}</div>
-      <div class="section">${sectionHeader(dynamicTab4Title, '#7c3aed')}${quotesHtml}</div>
-      <div class="section">${sectionHeader('Exam High-Weightage Cheat-Sheet', '#f43f5e')}${cheatHtml}</div>
-      <div class="section">${sectionHeader('Active Revision Flashcards', '#6b21a8')}${flashcardsHtml}</div>
-      </body></html>`;
-
-    const printWin = window.open('', '_blank');
-    if (printWin) {
-      printWin.document.write(fullHtml);
-      printWin.document.close();
-      printWin.focus();
-      setTimeout(() => {
-        printWin.print();
-        setDownloadingPdf(false);
-      }, 600);
-    } else {
-      setDownloadingPdf(false);
-    }
-  };
-
   const buildSummaryMap = (summaryText) => {
     if (!summaryText) return {};
     const rawLines = summaryText.split('\n');
@@ -402,9 +308,11 @@ export default function Dashboard() {
         if (!pageMap[currentKey]) pageMap[currentKey] = [];
       } else {
         if (!pageMap[currentKey]) pageMap[currentKey] = [];
-        // CLEANED STAR PREFIX LOGIC HERE: Drops asterisk markers automatically for clean blocks look
-        const sanitizedLine = trimmed.replace(/^[\*\-\+]\s*/, '');
-        pageMap[currentKey].push(sanitizedLine);
+        // CLEANED: Stripped both bullet points stars (*) and clean dynamic leading spaces
+        const sanitizedLine = trimmed.replace(/^[\*\-\+]\s*/, '').trim();
+        if (sanitizedLine) {
+          pageMap[currentKey].push(sanitizedLine);
+        }
       }
     });
     return pageMap;
@@ -416,25 +324,25 @@ export default function Dashboard() {
 
     const pageMap = buildSummaryMap(data.summary);
     const badgeColors = [
-      'bg-emerald-50 border-emerald-200 text-emerald-800',
-      'bg-sky-50 border-sky-200 text-sky-800',
-      'bg-amber-50 border-amber-200 text-amber-800',
-      'bg-indigo-50 border-indigo-200 text-indigo-800',
-      'bg-rose-50 border-rose-200 text-rose-800',
-      'bg-purple-50 border-purple-200 text-purple-800',
+      'bg-emerald-100 border-emerald-300 text-emerald-800',
+      'bg-teal-100 border-teal-300 text-teal-800',
+      'bg-cyan-100 border-cyan-300 text-cyan-800',
+      'bg-sky-100 border-sky-300 text-sky-800',
+      'bg-indigo-100 border-indigo-300 text-indigo-800',
+      'bg-violet-100 border-violet-300 text-violet-800',
     ];
 
     return (
-      <div className="space-y-7">
+      <div className="space-y-6">
         {Object.keys(pageMap).map((header, index) => (
           <div key={index} className="space-y-3">
             <span className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] px-4 py-2 rounded-xl border ${badgeColors[index % badgeColors.length]}`}>
               <span className="opacity-70">✦</span> {header}
             </span>
+            {/* FIXED TYPOGRAPHY: Removed spacing segments and bound fonts into tight natural text block format */}
             <div className="bg-white border border-slate-200 border-l-4 border-l-emerald-500 rounded-2xl p-6 shadow-sm">
-              {/* FIXED TEXT LAYOUT: Set to text-slate-950 font-black with line spacing rules like image 2 */}
-              <p className="text-slate-950 font-black text-base md:text-lg leading-relaxed whitespace-pre-line tracking-wide">
-                {pageMap[header].join('\n\n')}
+              <p className="text-slate-900 font-semibold text-sm md:text-base leading-relaxed text-justify tracking-normal whitespace-pre-line">
+                {pageMap[header].join(' ')}
               </p>
             </div>
           </div>
@@ -457,7 +365,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 selection:bg-emerald-200 p-4 md:p-6" style={{ fontFamily: "'DM Sans', 'Outfit', system-ui, sans-serif" }}>
 
-      {/* ── FIXED NAVBAR — BRAND NAME IS ONLY PAGIVERSE ── */}
+      {/* ── NAVBAR — REMOVED THE EMBEDDED DOWNLOAD BUTTON PER INSTRUCTIONS ── */}
       <header className="flex justify-between items-center bg-white border border-slate-200 rounded-2xl px-5 py-4 mb-6 shadow-sm">
         <div className="flex items-center gap-3">
           <button
@@ -471,26 +379,16 @@ export default function Dashboard() {
           </div>
           <h1 className="text-[18px] font-black text-slate-900 tracking-tight">Pagiverse</h1>
         </div>
-        {data && (
-          <button
-            onClick={handleDownloadPdfReport}
-            disabled={downloadingPdf}
-            className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-black px-5 py-2.5 rounded-xl shadow-md hover:shadow-emerald-400/30 hover:from-emerald-600 hover:to-teal-600 transition-all disabled:opacity-60"
-          >
-            <Download size={14} />
-            {downloadingPdf ? 'Compiling Report...' : 'Download PDF Report'}
-          </button>
-        )}
       </header>
 
-      {/* ── WORKSPACE CORE GRID ── */}
+      {/* ── MAIN GRID ── */}
       <div className={`max-w-[1640px] mx-auto grid gap-6 transition-all ${sidebarOpen ? 'grid-cols-1 lg:grid-cols-[300px_1fr]' : 'grid-cols-1'}`}>
 
-        {/* ── LEFT SIDEBAR CONTAINER ── */}
+        {/* ── LEFT SIDEBAR ── */}
         {sidebarOpen && (
           <div className="flex flex-col gap-5">
 
-            {/* UPLOAD LAYER ZONE */}
+            {/* UPLOAD ZONE */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
               <h3 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
                 <Upload size={13} className="text-emerald-500" /> Feed Core Document PDF
@@ -530,7 +428,7 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* COLLAPSIBLE SLIDER CONTROLLER NAVIGATION */}
+            {/* COLLAPSIBLE NAV LIST SLIDER */}
             {data && (
               <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                 <button
@@ -557,7 +455,7 @@ export default function Dashboard() {
                           <div className="flex items-center gap-2.5 min-w-0">
                             <Icon size={14} className={isActive ? pal.label : 'text-slate-400'} />
                             <div className="truncate">
-                              <p className={`text-[11px] font-black tracking-tight truncate ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>{label}</p>
+                              <p className={`text-[11px] font-black tracking-tight truncate ${isActive ? 'text-slate-900 font-black' : 'text-slate-600'}`}>{label}</p>
                               <p className={`text-[9px] font-semibold truncate ${isActive ? 'text-slate-500' : 'text-slate-400'}`}>{sub}</p>
                             </div>
                           </div>
@@ -576,7 +474,7 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* REPOSITORY ARCHIVE STORAGE PANEL */}
+            {/* ANALYSIS ARCHIVE REPOSITORY */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] flex items-center gap-1.5">
@@ -616,7 +514,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ── LOADING CORE VIEWPORT ── */}
+        {/* ── LOADING PANEL ── */}
         {loading && (
           <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm space-y-6">
             <div className="max-w-sm mx-auto space-y-2">
@@ -638,24 +536,23 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ── DISPLAY WORKSPACE LAYER ── */}
+        {/* ── RESULTS PANEL ── */}
         {data && !loading && (
           <div ref={resultsRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
 
-            {/* VIEW STATUS PIN BAR */}
+            {/* PANEL TOP STATUS BAR */}
             <div className="bg-slate-50 border-b border-slate-200 px-6 py-3 flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-black text-slate-700 tracking-tight">Analysis Engine — Scope Succeeded</p>
                 <p className="text-[10px] font-semibold text-slate-400">Target Core Node Matrix Active</p>
               </div>
-              <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
             </div>
 
-            {/* SPLIT FRAMEWORK WORKSPACE */}
+            {/* CONTENT GRID */}
             <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] min-h-[620px]">
 
-              {/* ACTIVE TABS GRAPHICAL VIEW */}
+              {/* INNER TAB SIDEBAR */}
               <aside className="bg-slate-50/60 border-r border-slate-100 p-3 space-y-1.5 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
                 {tabs.map(({ key, icon: Icon, label, sub, pal }) => {
                   const isActive = activeTab === key;
@@ -688,10 +585,10 @@ export default function Dashboard() {
                 })}
               </aside>
 
-              {/* MAIN REFLUSH VIEWPORT DISPLAY MAIN */}
+              {/* MAIN CONTENT VIEWPORT */}
               <main className="p-6 md:p-8 bg-white overflow-y-auto">
 
-                {/* PAGE SUMMARIES FRAME LAYER */}
+                {/* PAGE SUMMARIES */}
                 {activeTab === 'summary' && (
                   <div className="space-y-5">
                     <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
@@ -703,7 +600,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* DEEP INSIGHTS PANE */}
+                {/* DEEP INSIGHTS MATRIX */}
                 {activeTab === 'key_points' && (
                   <div className="space-y-4">
                     <div className="pb-3 border-b border-slate-100 mb-5">
@@ -722,7 +619,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* TIMELINE PANE */}
+                {/* TIMELINE */}
                 {activeTab === 'timeline' && (
                   <div className="space-y-4">
                     <div className="pb-3 border-b border-slate-100 mb-5">
@@ -741,7 +638,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* QUOTES AND STATUTORY LAWS PANE */}
+                {/* QUOTES / LAWS / ACTS */}
                 {activeTab === 'quotes' && (
                   <div className="space-y-4">
                     <div className="pb-3 border-b border-slate-100 mb-5">
@@ -760,7 +657,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* HIGH WEIGHTAGE COMPILER CHEAT SHEET PANE */}
+                {/* CHEAT SHEET */}
                 {activeTab === 'cheat_sheet' && (
                   <div className="space-y-4">
                     <div className="pb-3 border-b border-slate-100 mb-5">
@@ -779,7 +676,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* ACTIVE REVISION FLASHCARDS PANEL */}
+                {/* FLASHCARDS */}
                 {activeTab === 'flashcards' && (
                   <div className="space-y-5">
                     <div className="pb-3 border-b border-slate-100 mb-5 flex items-center justify-between">
