@@ -185,6 +185,7 @@ export default function Dashboard() {
     if (!file) return;
     const formData = new FormData();
     formData.append('file', file);
+    loadingTimeoutEnforcer();
     setLoading(true);
     setUploadProgress(15);
     setData(null);
@@ -205,14 +206,20 @@ export default function Dashboard() {
     }
   };
 
+  const loadingTimeoutEnforcer = () => {
+    setTimeout(() => {
+      setUploadProgress((p) => (p > 0 && p < 90 ? p + 5 : p));
+    }, 12000);
+  };
+
   const pollAnalytics = async (docId, fileName) => {
     let completed = false;
     let attempts = 0;
-    const maxAttempts = 35;
+    const maxAttempts = 45; 
 
     while (!completed && attempts < maxAttempts) {
       try {
-        setUploadProgress(40 + Math.min(attempts * 2, 55));
+        setUploadProgress(40 + Math.min(attempts * 1.3, 58));
         await new Promise((r) => setTimeout(r, 3000));
         
         const res = await fetch(`${API_BASE_URL}/document/${docId}`, {
@@ -344,14 +351,17 @@ export default function Dashboard() {
       <div className="space-y-6">
         {Object.keys(pageMap).map((header, index) => {
           if (pageMap[header].length === 0) return null;
+          
+          const flatTextSummary = pageMap[header].join(' ').replace(/\s+/g, ' ').trim();
+
           return (
             <div key={index} className="space-y-3">
               <span className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] px-4 py-2 rounded-xl border ${badgeColors[index % badgeColors.length]}`}>
                 <span className="opacity-70">✦</span> {header}
               </span>
               <div className="bg-white border border-slate-200 border-l-4 border-l-emerald-500 rounded-2xl p-6 shadow-sm">
-                <p className="text-slate-900 font-semibold text-sm md:text-base leading-relaxed text-justify tracking-normal whitespace-pre-line">
-                  {pageMap[header].join(' ')}
+                <p className="text-slate-900 font-semibold text-sm md:text-base leading-relaxed text-justify tracking-normal whitespace-normal">
+                  {flatTextSummary}
                 </p>
               </div>
             </div>
@@ -366,8 +376,8 @@ export default function Dashboard() {
   const tabs = [
     { key: 'summary',     icon: FileText,    label: 'Page Summaries',       sub: 'Granular index bounds',       pal: TAB_PALETTE.summary },
     { key: 'key_points', icon: BookOpen,    label: 'Deep Insights Matrix', sub: 'Micro factual metrics',         pal: TAB_PALETTE.key_points },
-    { key: 'timeline',   icon: Calendar,    label: dynamicTab3Title,       sub: dynamicTab3Sub,                  pal: TAB_PALETTE.timeline },
-    { key: 'quotes',     icon: Layers,      label: dynamicTab4Title,       sub: dynamicTab4Sub,                  pal: TAB_PALETTE.quotes },
+    { key: 'timeline',   icon: Calendar,    label: dynamicTab3Title,       sub: 'Chronology benchmarks',        pal: TAB_PALETTE.timeline },
+    { key: 'quotes',     icon: Layers,      label: dynamicTab4Title,       sub: 'Verbatim high weightage indices', pal: TAB_PALETTE.quotes },
     { key: 'cheat_sheet',icon: Sparkles,    label: 'Exam Cheat-Sheet',     sub: 'Formula blocks compiler',       pal: TAB_PALETTE.cheat_sheet },
     { key: 'flashcards', icon: HelpCircle,  label: 'Active Flashcards',    sub: 'Interactive testing matrix',    pal: TAB_PALETTE.flashcards },
   ];
@@ -549,17 +559,7 @@ export default function Dashboard() {
         {/* ── RESULTS PANEL ── */}
         {data && !loading && (
           <div ref={resultsRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-
-            {/* PANEL TOP STATUS BAR */}
-            <div className="bg-slate-50 border-b border-slate-200 px-6 py-3 flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-black text-slate-700 tracking-tight">Analysis Engine — Scope Succeeded</p>
-                <p className="text-[10px] font-semibold text-slate-400">Target Core Node Matrix Active</p>
-              </div>
-            </div>
-
-            {/* CONTENT GRID */}
+            {/* 🛠️ REMOVED THE TOP STATUS BANNER (ANALYSIS ENGINE BAR) TO LEAVE ONLY THE DIRECT CLEAN CONTENT AREA */}
             <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] min-h-[620px]">
 
               {/* INNER TAB SIDEBAR */}
