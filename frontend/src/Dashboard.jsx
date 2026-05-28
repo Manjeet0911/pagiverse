@@ -180,16 +180,13 @@ export default function Dashboard() {
   }, [loading]);
 
   const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
     else if (e.type === 'dragleave') setDragActive(false);
   };
 
   const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
+    e.preventDefault(); e.stopPropagation(); setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const droppedFile = e.dataTransfer.files[0];
       if (droppedFile.type === 'application/pdf') setFile(droppedFile);
@@ -213,7 +210,6 @@ export default function Dashboard() {
     setData(null);
 
     try {
-      // 🛠️ FIX 1: Pointed directly to your working backend endpoint '/upload' instead of '/api/process-pdf'
       const response = await fetch(`${API_BASE_URL}/upload`, { method: 'POST', body: formData });
       const result = await response.json();
       if (result && result.id) {
@@ -237,8 +233,6 @@ export default function Dashboard() {
       try {
         setUploadProgress(50 + Math.min(attempts * 2, 45));
         await new Promise((r) => setTimeout(r, 3000));
-        
-        // 🛠️ FIX 2: Fixed accurate matching routes path constraint tracking structure
         const res = await fetch(`${API_BASE_URL}/document/${docId}`);
         const statusCheck = await res.json();
 
@@ -322,12 +316,10 @@ export default function Dashboard() {
     });
   };
 
-  // Print all pages (full report)
   const printWholeDocumentMode = () => {
     window.print();
   };
 
-  // Print only the currently visible tab
   const printTargetTabOnlyMode = () => {
     const printArea = document.getElementById('target-tab-print-viewport');
     if (!printArea) return;
@@ -340,13 +332,7 @@ export default function Dashboard() {
   };
 
   const renderSummaryBlocks = () => {
-    if (!data?.summary) {
-      return (
-        <div className="text-xs font-bold text-slate-400 py-8 text-center">
-          No summary datasets unallocated.
-        </div>
-      );
-    }
+    if (!data?.summary) return <div className="text-xs font-bold text-slate-400 py-8 text-center">No summary datasets allocated.</div>;
 
     const paragraphs = data.summary.split('\n\n');
     const renderedBlocks = [];
@@ -365,9 +351,9 @@ export default function Dashboard() {
         renderedBlocks.push(
           <div
             key={`p-${idx}`}
-            className="bg-white p-5 rounded-2xl shadow-sm mb-4 border-l-4 border-emerald-500 border border-slate-100"
+            className="bg-white p-6 rounded-2xl shadow-sm mb-5 border-l-4 border-emerald-500 border border-slate-100"
           >
-            <p className="text-slate-950 font-black text-base md:text-lg leading-relaxed whitespace-pre-line tracking-wide">
+            <p className="text-black font-black text-base md:text-lg leading-relaxed whitespace-pre-line tracking-wide">
               {paragraph}
             </p>
           </div>
@@ -736,9 +722,9 @@ export default function Dashboard() {
               {/* ── DATA DISPLAY AREA ── */}
               <main id="target-tab-print-viewport" className="md:col-span-3 p-6 md:p-8 bg-white print:p-0">
 
-                {/* PAGE SUMMARIES */}
-                {activeTab === 'summary' && (
-                  <div className="space-y-4">
+                {/* PAGE SUMMARIES CONTAINER AREA */}
+                {(activeTab === 'summary' || window.matchMedia('print').matches) && (
+                  <div className={`space-y-4 ${activeTab !== 'summary' ? 'print:block hidden print:break-before-page' : ''}`}>
                     <div className="text-xs font-black tracking-widest text-emerald-600 uppercase border-b border-slate-100 pb-2 mb-4">
                       💡 {dynamicSummaryHighlight}
                     </div>
@@ -746,9 +732,10 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* DEEP INSIGHTS MATRIX */}
-                {activeTab === 'key_points' && (
-                  <div className="space-y-4">
+                {/* DEEP INSIGHTS MATRIX CONTAINER AREA */}
+                {(activeTab === 'key_points' || window.matchMedia('print').matches) && (
+                  <div className={`space-y-4 ${activeTab !== 'key_points' ? 'print:block hidden print:break-before-page' : ''}`}>
+                    <h2 className="hidden print:flex text-lg font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><BookOpen size={16}/> Deep Insights Matrix</h2>
                     <div className="grid grid-cols-1 gap-3">
                       {data.key_points.map((item, idx) => (
                         <div
@@ -772,9 +759,10 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* TIMELINE */}
-                {activeTab === 'timeline' && (
-                  <div className="space-y-4">
+                {/* TIMELINE CONTAINER AREA */}
+                {(activeTab === 'timeline' || window.matchMedia('print').matches) && (
+                  <div className={`space-y-4 ${activeTab !== 'timeline' ? 'print:block hidden print:break-before-page' : ''}`}>
+                    <h2 className="hidden print:flex text-lg font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><Calendar size={16}/> {dynamicTab3Title}</h2>
                     <div className="space-y-3 border-l-2 border-amber-300 pl-4 ml-2 relative">
                       {data.timeline_dates.map((dateEvent, idx) => (
                         <div
@@ -787,16 +775,17 @@ export default function Dashboard() {
                       ))}
                       {data.timeline_dates.length === 0 && (
                         <div className="text-xs font-bold text-slate-400 py-8 text-center">
-                          No sequential array entries found.
+                          No chronological entries found.
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* QUOTES */}
-                {activeTab === 'quotes' && (
-                  <div className="space-y-4">
+                {/* QUOTES CONTAINER AREA */}
+                {(activeTab === 'quotes' || window.matchMedia('print').matches) && (
+                  <div className={`space-y-4 ${activeTab !== 'quotes' ? 'print:block hidden print:break-before-page' : ''}`}>
+                    <h2 className="hidden print:flex text-lg font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><Layers size={16}/> {dynamicTab4Title}</h2>
                     <div className="grid grid-cols-1 gap-4">
                       {data.historians_quotes.map((quoteText, idx) => (
                         <div
@@ -813,16 +802,17 @@ export default function Dashboard() {
                       ))}
                       {data.historians_quotes.length === 0 && (
                         <div className="text-xs font-bold text-slate-400 py-8 text-center">
-                          No verbatim statement blocks found.
+                          No statement blocks found.
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* EXAM CHEAT-SHEET */}
-                {activeTab === 'cheat_sheet' && (
-                  <div className="space-y-4">
+                {/* EXAM CHEAT-SHEET CONTAINER AREA */}
+                {(activeTab === 'cheat_sheet' || window.matchMedia('print').matches) && (
+                  <div className={`space-y-4 ${activeTab !== 'cheat_sheet' ? 'print:block hidden print:break-before-page' : ''}`}>
+                    <h2 className="hidden print:flex text-lg font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><Sparkles size={16}/> High Weightage Cheat-Sheet</h2>
                     <div className="grid grid-cols-1 gap-3">
                       {cheatSheetArray.map((cheatPoint, idx) => (
                         <div
@@ -837,16 +827,16 @@ export default function Dashboard() {
                       ))}
                       {cheatSheetArray.length === 0 && (
                         <div className="text-xs font-bold text-slate-400 py-8 text-center">
-                          No cheat sheet entries found.
+                          No cheat sheet parameters found.
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* INTERACTIVE FLASHCARDS */}
-                {activeTab === 'flashcards' && (
-                  <div className="space-y-6">
+                {/* INTERACTIVE FLASHCARDS CONTAINER AREA */}
+                {(activeTab === 'flashcards' || window.matchMedia('print').matches) && (
+                  <div className={`space-y-6 ${activeTab !== 'flashcards' ? 'print:block hidden print:break-before-page' : ''}`}>
                     <h2 className="text-xl font-extrabold flex items-center gap-2 ml-1 text-slate-800">
                       <HelpCircle size={20} className="text-purple-500" /> Core Interactive Flashcards
                     </h2>
