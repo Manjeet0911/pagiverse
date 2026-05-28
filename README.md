@@ -27,7 +27,6 @@
 - [Deployment & Infrastructure](#deployment--infrastructure)
 - [Engineering Milestones](#engineering-milestones)
 - [Known Constraints & Guardrails](#known-constraints--guardrails)
-- [Contributing](#contributing)
 
 ---
 
@@ -35,10 +34,10 @@
 
 **Pagiverse** is a production-grade, full-stack academic document intelligence platform. It ingests raw PDF files — including full textbook chapters, dense lecture notes, and multi-page academic manuscripts — and processes them through a multi-layer AI pipeline to output six distinct structured analytical data blocks.
 
-The system is engineered for real-world academic workloads: documents with 24+ pages, mixed-language scripts, and high-density factual content. It is designed to remain within Gemini API free-tier quota constraints while maintaining sub-60-second response times for typical academic documents.
+The system is engineered for real-world academic workloads: documents with 24+ pages, mixed-language scripts, and high-density factual content. It is designed to remain within Gemini API free-tier quota constraints while maintaining fast response times for typical academic documents.
 
 | Property | Value |
-|---|---|
+| :--- | :--- |
 | **Primary Use Case** | Academic PDF analysis and structured knowledge extraction |
 | **Supported Languages** | English, Hindi (Devanagari script), mixed-language documents |
 | **Document Target** | Textbook chapters, lecture notes, academic manuscripts (1–100+ pages) |
@@ -50,6 +49,8 @@ The system is engineered for real-world academic workloads: documents with 24+ p
 ---
 
 ## Live Architecture
+
+The diagram below shows the full request lifecycle — from a user uploading a PDF in the browser, through the FastAPI processing pipeline, and back to the frontend as a structured JSON analytics payload.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -73,7 +74,7 @@ The system is engineered for real-world academic workloads: documents with 24+ p
 │     └─► Gemini API  (2–3 requests per 24-page document)             │
 │     └─► JSON schema validation & storage                            │
 │                                                                     │
-│   GET /document/{id}        → status: pending | completed | failed  │
+│   GET /document/{id}         → status: pending | completed | failed │
 │   GET /document/{id}/analytics → full structured JSON payload       │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -85,20 +86,20 @@ The system is engineered for real-world academic workloads: documents with 24+ p
 Pagiverse extracts six discrete, structured output blocks from every document. Each block is rendered inside its own dedicated pastel-accented content card in the frontend.
 
 | # | Block Name | Frontend Tab | Subject-Adaptive Header Examples | Output Format |
-|---|---|---|---|---|
-| 1 | **Page Summaries** | Page Summaries | *Comprehensive Core Overview* / *Mathematical Discrete Analytical Concept Isolated* | Grouped paragraph blocks per page |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | **Page Summaries** | Page Summaries | *Comprehensive Core Overview* / *Mathematical Concept Isolated* | Grouped paragraph blocks per page |
 | 2 | **Deep Insights Matrix** | Deep Insights Matrix | *Data Science & Algorithmic Paradigm Isolated* | Numbered factual bullet array |
-| 3 | **Timeline & Chronology** | Timeline & Chronology | *Model & Algorithm Evolution* / *System State Chronology* / *Sequential Steps & Proofs* | Chronological event list |
-| 4 | **Quotes, Laws & Acts** | Quotes, Laws & Acts | *Complexity Rules & Logic* / *Axioms, Theorems & Corollaries* / *Standards, Protocols & Limits* | Verbatim block quotes |
+| 3 | **Timeline & Chronology** | Timeline & Chronology | *Model & Algorithm Evolution* / *System State Chronology* | Chronological event list |
+| 4 | **Quotes, Laws & Acts** | Quotes, Laws & Acts | *Complexity Rules & Logic* / *Axioms, Theorems & Corollaries* | Verbatim block quotes |
 | 5 | **Exam Cheat-Sheet** | Exam Cheat-Sheet | *High Weightage Formula Blocks* | Condensed bullet-point list |
 | 6 | **Active Flashcards** | Active Flashcards | — | Interactive flip-card pairs (question / answer) |
 
 ### Subject-Adaptive Header Logic
 
-The frontend automatically detects document domain from the extracted content and re-maps section headers accordingly. No manual configuration is required.
+The frontend automatically detects the document's subject domain from the extracted content and re-maps Tab 3 and Tab 4 section headers accordingly. No manual configuration is required — it works transparently on every upload.
 
 | Detected Domain Keywords | Tab 3 Header | Tab 4 Header |
-|---|---|---|
+| :--- | :--- | :--- |
 | `algorithm`, `complexity`, `sorting`, `big-o`, `daa`, `tree` | Model & Algorithm Evolution | Complexity Rules & Logic |
 | `theorem`, `proof`, `induction`, `discrete`, `math` | Sequential Steps & Proofs | Axioms, Theorems & Corollaries |
 | `kernel`, `scheduling`, `operating`, `protocol`, `memory`, `process` | System State Chronology | Standards, Protocols & Limits |
@@ -108,28 +109,28 @@ The frontend automatically detects document domain from the extracted content an
 
 ## Backend Architecture
 
-### Stack
+### Technical Stack
 
 | Component | Technology |
-|---|---|
+| :--- | :--- |
 | Web Framework | FastAPI 0.110+ |
 | ASGI Server | Uvicorn / Gunicorn |
 | PDF Parsing | pypdf |
-| AI Model | Google Gemini API (`gemini-1.5-flash`) |
-| Concurrency | Python asyncio, asyncio.Semaphore |
+| AI Core | Google GenAI SDK (`gemini-2.5-flash`) |
+| Concurrency | Python `asyncio` + `asyncio.Semaphore` |
 | Deployment | Render (Free Tier) |
 
 ### Ingestion Pipeline
 
-The ingestion pipeline is the core engineering improvement of this release cycle. The previous architecture submitted entire document text as a single monolithic string, which caused frequent 503 memory errors on the Render free-tier container and exceeded Gemini's per-request token ceiling on documents longer than ~8 pages.
+The previous architecture submitted the entire document text as a single monolithic string, which caused frequent **503 memory errors** on the Render free-tier container and exceeded Gemini's per-request token ceiling on documents longer than ~8 pages.
 
-The current architecture implements **Asynchronous Page-Wise Extraction with Compact Batch Grouping**:
+The current architecture implements **Asynchronous Page-Wise Extraction with Compact Batch Grouping**, breaking the document into clean, filterable page units before grouping them into optimal batches for the AI model.
 
 ```
 Raw PDF
   │
   ▼
-pypdf.PdfReader  ──►  Extract text per page  ──►  [page_1_text, page_2_text, ..., page_N_text]
+pypdf.PdfReader ──► Extract text per page ──► [page_1_text, page_2_text, ..., page_N_text]
   │
   ▼
 Noise Filter Pass
@@ -138,35 +139,39 @@ Noise Filter Pass
   │
   ▼
 Compact Batch Grouping
-  └── ~10 dense pages per batch  →  [batch_1, batch_2, batch_3]
+  └── ~10 dense pages per batch ──► [batch_1, batch_2, batch_3]
       (24-page document → max 3 Gemini API requests)
   │
   ▼
 asyncio.gather(*[process_batch(b) for b in batches])
-  └── asyncio.Semaphore(2)  →  max 2 concurrent Gemini calls at any time
+  └── asyncio.Semaphore(2) ──► Limits simultaneous parallel requests
   │
   ▼
-Structured JSON Assembly  →  stored in-memory / DB keyed by document ID
+Structured JSON Assembly ──► Synchronized to active database ledger tracking
 ```
 
 ### Noise Filter Thresholds
 
+These thresholds prevent low-quality page fragments from contaminating the token stream sent to Gemini.
+
 | Word Count per Page | Action | Reason |
-|---|---|---|
+| :--- | :--- | :--- |
 | `< 15 words` | **Drop** | Page is a footer, chapter divider, or blank padding — zero semantic value |
 | `15 – 50 words` | **Merge** into next block | Partial content fragment; merging preserves logical continuity |
-| `> 50 words` | **Accept** as independent page unit | Sufficient semantic density for independent analysis |
+| `> 50 words` | **Accept** as independent unit | Sufficient semantic density for standalone analysis |
 
 ### Quota Guardrail Management
 
-Gemini's free tier enforces a **20 requests/day** ceiling. The compact batching strategy ensures that even the largest academic documents (24+ pages) consume no more than 2–3 API requests:
+Gemini's free tier enforces a **20 requests/day** ceiling. Without batching, a 24-page document could trigger 7–24 individual API calls, easily breaching this limit within a single session. The compact grouping strategy solves this directly.
 
 ```
-Without batching:  24 pages  →  ~7–24 individual Gemini requests  (quota breach risk)
-With batching:     24 pages  →  2–3 compact batch requests        (well within quota)
+Without batching:  24 pages  ──►  ~7–24 individual Gemini requests  (quota breach risk)
+With batching:     24 pages  ──►  2–3 compact batch requests        (well within quota)
 ```
 
 ### Concurrency Control
+
+The `asyncio.Semaphore(2)` cap ensures that no more than 2 Gemini API calls are in-flight simultaneously. This prevents concurrent user uploads from saturating the Render container's single-worker thread pool.
 
 ```python
 semaphore = asyncio.Semaphore(2)
@@ -178,17 +183,17 @@ async def process_batch_safe(batch_text: str):
 results = await asyncio.gather(*[process_batch_safe(b) for b in batches])
 ```
 
-The `Semaphore(2)` cap prevents concurrent spike loads from saturating the Render container's single-worker thread pool during simultaneous multi-user upload events.
-
 ### API Endpoints
 
 | Method | Endpoint | Description |
-|---|---|---|
+| :--- | :--- | :--- |
 | `POST` | `/upload` | Accepts `multipart/form-data` PDF. Returns `{ "id": "<doc_id>" }` |
 | `GET` | `/document/{id}` | Returns `{ "status": "pending" \| "completed" \| "failed" }` |
 | `GET` | `/document/{id}/analytics` | Returns full structured JSON analytics payload |
 
 ### Analytics JSON Schema
+
+This is the exact shape of the object the frontend receives and renders across all six content tabs.
 
 ```json
 {
@@ -207,10 +212,10 @@ The `Semaphore(2)` cap prevents concurrent spike loads from saturating the Rende
 
 ## Frontend Architecture
 
-### Stack
+### Technical Stack
 
 | Component | Technology |
-|---|---|
+| :--- | :--- |
 | Framework | React 18 |
 | Build Tool | Vite |
 | Styling | Tailwind CSS v4 |
@@ -218,9 +223,11 @@ The `Semaphore(2)` cap prevents concurrent spike loads from saturating the Rende
 | State Management | React `useState` / `useEffect` hooks |
 | PDF Export | Custom HTML-to-print compilation engine |
 
-### Polling Engine
+### Long-Poll Engine
 
-The frontend uses a non-blocking long-poll loop to check document processing status. The loop runs up to **150 attempts** at 3.5-second intervals — providing a total maximum wait window of ~8.75 minutes — which is sufficient to accommodate even the most compute-intensive 24-page academic documents on a cold Render container.
+The frontend uses a non-blocking long-poll loop to check document processing status. The loop runs up to **150 attempts** at 3.5-second intervals, providing a total maximum wait window of ~8.75 minutes. This is sufficient to accommodate even the most compute-intensive 24-page documents processing on a cold Render container.
+
+The `maxAttempts` value was previously set to 25, which caused a premature 9-page cutoff artifact for full 24-page documents. Raising it to 150 with an adjusted progress increment rate resolves this completely.
 
 ```javascript
 const pollAnalytics = async (docId, fileName) => {
@@ -241,7 +248,8 @@ const pollAnalytics = async (docId, fileName) => {
       const dataRes = await fetch(`${API_BASE_URL}/document/${docId}/analytics`);
       const result = await dataRes.json();
 
-      // requestAnimationFrame prevents forced synchronous reflow on bulk JSON commit
+      // requestAnimationFrame defers state commit to next paint cycle,
+      // preventing forced synchronous reflow on bulk JSON dispatch
       window.requestAnimationFrame(() => {
         setData(parsedData);
         setUploadProgress(100);
@@ -256,36 +264,21 @@ const pollAnalytics = async (docId, fileName) => {
 
 ### Thread-Safe State Commit
 
-All large JSON analytics payloads are committed to React state inside a `window.requestAnimationFrame` callback. This defers the state update to the browser's next paint cycle, eliminating forced synchronous reflows that would otherwise freeze the UI thread when dispatching arrays of 50–200+ items simultaneously.
+All large JSON analytics payloads are committed to React state inside a `window.requestAnimationFrame` callback. This defers the update to the browser's next paint cycle, eliminating the forced synchronous reflows that would otherwise freeze the UI thread when dispatching arrays of 50–200+ items in a single tick.
 
 ### PDF Export Engine
 
-The "Download PDF Report" utility compiles all six extraction blocks into a single structured HTML document and triggers the browser's native print dialog for PDF saving. It uses `Array.isArray()` guards on every data array before iteration to prevent runtime errors from incomplete or null backend responses.
-
-```javascript
-const handleDownloadPdfReport = () => {
-  // Safe iteration with Array.isArray guards on all 6 data blocks
-  const keyPointsHtml = Array.isArray(data.key_points)
-    ? data.key_points.map((item) => `<div>...</div>`).join('')
-    : '';
-  // ... repeated for all blocks
-
-  const blob = new Blob([fullHtml], { type: 'text/html' });
-  const printWin = window.open(URL.createObjectURL(blob), '_blank');
-  printWin.onload = () => { printWin.focus(); printWin.print(); };
-};
-```
+The "Download PDF Report" utility compiles all six extraction blocks into a single structured HTML document and triggers the browser's native print dialog for PDF saving. Every data array is wrapped in an `Array.isArray()` guard before iteration to prevent null or incomplete backend responses from crashing the export engine.
 
 ### Local Analysis Archive
 
 All completed analytics results are persisted to `localStorage` under the key `pagiverse_tabbed_private_history`. Previous analyses can be reloaded instantly from the **📚 ANALYSIS ARCHIVE REPOSITORY** sidebar panel without re-uploading or re-processing the document.
 
-```
-localStorage key:  pagiverse_tabbed_private_history
-Value schema:      Array<{ id: string, filename: string, analytics: AnalyticsPayload }>
-Max display:       Unbounded (scroll-capped at 224px in sidebar)
-Clear trigger:     Confirm dialog → wipes localStorage key + resets UI state
-```
+| Property | Detail |
+| :--- | :--- |
+| **Storage Key** | `pagiverse_tabbed_private_history` |
+| **Value Schema** | `Array<{ id: string, filename: string, analytics: AnalyticsPayload }>` |
+| **Clear Trigger** | Confirm dialog → wipes localStorage key and resets UI state |
 
 ---
 
@@ -294,11 +287,12 @@ Clear trigger:     Confirm dialog → wipes localStorage key + resets UI state
 ### Prerequisites
 
 | Tool | Minimum Version |
-|---|---|
+| :--- | :--- |
 | Python | 3.11+ |
 | Node.js | 18+ |
 | npm | 9+ |
 | Google Gemini API Key | Free tier sufficient |
+| Tesseract OCR Engine | Required only if processing scanned document packages locally |
 
 ---
 
@@ -318,19 +312,14 @@ venv\Scripts\activate           # Windows
 pip install -r requirements.txt
 
 # 4. Configure environment variables
-cp .env.example .env
-```
-
-Edit `.env`:
-
-```env
+# Create a .env file in the backend root and add:
 GEMINI_API_KEY=your_google_gemini_api_key_here
+
+# 5. Start the development server
+uvicorn app.main:app --reload --port 8000
 ```
 
-```bash
-# 5. Start the development server
-uvicorn main:app --reload --port 8000
-```
+> **Windows note:** If using local OCR features, ensure Tesseract is installed at `C:\Program Files\Tesseract-OCR\tesseract.exe` or update the executable path in your local environment settings.
 
 Backend will be live at: `http://localhost:8000`
 
@@ -340,16 +329,12 @@ Backend will be live at: `http://localhost:8000`
 
 ```bash
 # 1. Navigate to frontend directory
-cd pagiverse/frontend
+cd ../frontend
 
 # 2. Install dependencies
 npm install
 
-# 3. Configure API endpoint
-# Edit src/Dashboard.jsx line 4:
-#   const API_BASE_URL = "http://localhost:8000";
-
-# 4. Start the Vite dev server
+# 3. Start the Vite dev server
 npm run dev
 ```
 
@@ -371,21 +356,6 @@ python-dotenv
 
 ---
 
-### Git Workflow
-
-```bash
-# Stage all changes
-git add .
-
-# Commit with structured message
-git commit -m "feat: describe your change here"
-
-# Push to main branch
-git push origin main
-```
-
----
-
 ## Deployment & Infrastructure
 
 ### Backend — Render
@@ -393,100 +363,62 @@ git push origin main
 The FastAPI backend is deployed as a **Web Service** on Render's free tier.
 
 | Setting | Value |
-|---|---|
+| :--- | :--- |
 | **Build Command** | `pip install -r requirements.txt` |
-| **Start Command** | `gunicorn main:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT` |
+| **Start Command** | `gunicorn app.main:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT` |
 | **Environment Variable** | `GEMINI_API_KEY` = your key |
 | **Instance Type** | Free |
-| **Region** | Oregon (US West) |
 
 ### Cold-Start Prevention — UptimeRobot
 
-Render's free tier suspends web service instances after **15 minutes of inactivity**, introducing 30–60 second cold-start delays on the next request. To eliminate this entirely, the backend instance is registered with **UptimeRobot** on a strict **5-minute ping interval**.
+Render's free tier suspends web service instances after **15 minutes of inactivity**, introducing 30–60 second cold-start delays on the next incoming request. To eliminate this entirely, the backend instance is registered with **UptimeRobot** on a strict **5-minute ping interval**, keeping the Render container perpetually warm.
 
 | Configuration | Value |
-|---|---|
+| :--- | :--- |
 | **Monitor Type** | HTTP(s) |
-| **Monitor URL** | `https://pagiverse.onrender.com` (or `/health` endpoint) |
+| **Monitor URL** | `https://pagiverse.onrender.com` |
 | **Check Interval** | Every 5 minutes |
-| **Alert Contacts** | Optional — email on downtime |
 
-This keeps the Render container perpetually warm, reducing first-request latency to under 500ms at all hours.
-
-### Frontend — Deployment Options
-
-The React/Vite frontend can be deployed to any static hosting provider:
+### Frontend — Deployment
 
 ```bash
 # Build for production
 npm run build
 
-# Output directory: dist/
-# Deploy dist/ to: Vercel, Netlify, Render Static Site, GitHub Pages, Cloudflare Pages
+# The output /dist directory can be deployed to:
+# Vercel, Netlify, Render Static Site, GitHub Pages, or Cloudflare Pages
 ```
 
 ---
 
 ## Engineering Milestones
 
-The following table documents the major engineering decisions and bug resolutions completed during the current development cycle.
+The table below documents every major engineering decision and bug resolution completed during the current development cycle.
 
-| # | Component | Issue | Resolution |
-|---|---|---|---|
-| 1 | Backend — Ingestion | Single-shot large text dumps caused 503 memory errors on Render free tier | Replaced with asynchronous page-wise extraction via `pypdf` |
-| 2 | Backend — Quotas | 24-page documents generated 7–24 Gemini API calls, breaching 20/day free tier | Implemented compact batch grouping (~10 pages/batch → max 3 calls per document) |
-| 3 | Backend — Noise | Footer-only and blank padding pages contaminated token streams | Added word-count noise filter: drop < 15 words, merge 15–50 words into next block |
-| 4 | Backend — Concurrency | Simultaneous uploads caused Render container thread saturation | Implemented `asyncio.Semaphore(2)` to cap concurrent Gemini calls at 2 |
-| 5 | Backend — Runtime Crash | JavaScript `String()` syntax used inside Python string formatter | Replaced all `String(x)` occurrences with Python-native `str(x)` |
-| 6 | Frontend — Thread Freeze | Bulk 200+ item JSON array state commit caused synchronous browser reflow | Wrapped all analytics state commits in `window.requestAnimationFrame` |
-| 7 | Frontend — Layout Clutter | Redundant inner navigation tabs, success panels, and aside blocks consumed canvas space | Purged all duplicate layout nodes; unified to clean single-page scroll stream |
-| 8 | Frontend — PDF Export | Pop-up blocker dependencies and null array crashes in export engine | Fortified with `Array.isArray()` guards on all 6 data arrays before iteration |
-| 9 | Frontend — Polling Cutoff | 9-page result artifact returned for 24-page documents due to low `maxAttempts` cap | Raised `maxAttempts` from 25 → 150 with adjusted progress increment rate |
-| 10 | Infrastructure — Cold Start | Render free tier sleep caused 30–60s cold-start latency on first request | Registered instance with UptimeRobot at 5-minute ping interval |
+| Component | Issue | Resolution |
+| :--- | :--- | :--- |
+| Backend — Ingestion | Single-shot text dumps caused 503 memory errors on Render free tier | Replaced with asynchronous page-wise extraction loops via `pypdf` |
+| Backend — Quotas | 24-page documents generated 7–24 Gemini API calls, breaching the 20/day free-tier limit | Implemented compact batch grouping (~10 pages/batch → max 3 calls per document) |
+| Backend — Noise | Footer-only and blank padding pages contaminated the token stream sent to Gemini | Added word-count filter: drop `< 15` words, merge `15–50` words into next block |
+| Backend — Concurrency | Simultaneous user uploads caused Render container thread saturation | Implemented `asyncio.Semaphore(2)` to cap concurrent Gemini calls at 2 |
+| Backend — Runtime Crash | JavaScript `String()` constructor syntax was used inside Python string formatters | Overhauled all affected format layers and replaced with Python-native `str()` |
+| Frontend — Thread Freeze | Bulk 200+ item JSON state commits caused forced synchronous browser layout freeze | Wrapped all analytics state updates in `window.requestAnimationFrame` |
+| Frontend — Layout Clutter | Redundant inner tabs and duplicate static panels wasted canvas viewport space | Purged all duplicate node instances; unified layout to a clean single-scroll stream |
+| Frontend — PDF Export | Pop-up blocker dependencies and null array iteration caused export engine crashes | Fortified all six data arrays with explicit `Array.isArray()` conditional guards |
+| Frontend — Polling Cutoff | `maxAttempts: 25` caused a premature 9-page artifact cutoff for 24-page documents | Raised `maxAttempts` to `150` with an adjusted progress increment rate |
+| Infrastructure — Cold Start | Render free tier sleep caused 30–60s latency on the first request of each session | Registered instance with UptimeRobot at a 5-minute ping interval |
 
 ---
 
 ## Known Constraints & Guardrails
 
 | Constraint | Detail |
-|---|---|
-| **Gemini Free Tier Quota** | 20 requests/day. The compact batching strategy keeps typical 24-page documents within 2–3 requests. Heavy usage days may approach the ceiling. |
-| **Render Free Tier RAM** | 512MB. Documents exceeding ~150 pages may trigger memory pressure. Tested stable up to 100 pages. |
-| **Concurrent Users** | `asyncio.Semaphore(2)` limits to 2 parallel Gemini calls. Additional uploads queue behind the semaphore and process sequentially. |
-| **PDF Type Support** | Text-layer PDFs only. Scanned image-based PDFs with no embedded text layer will produce empty extraction results. |
-| **localStorage Persistence** | Analytics history is stored in the user's browser localStorage. Clearing browser data wipes the archive. No server-side history persistence in the current release. |
-| **Language Detection** | Hindi/Devanagari and English are processed natively. Other scripts (Arabic, Chinese, Cyrillic) are passed to Gemini as-is — output quality depends on Gemini's multilingual capability for that script. |
-
----
-
-## Contributing
-
-```bash
-# Fork the repository, then:
-
-# 1. Create a feature branch
-git checkout -b feat/your-feature-name
-
-# 2. Make changes and commit
-git add .
-git commit -m "feat(backend): describe change"
-
-# 3. Push your branch
-git push origin feat/your-feature-name
-
-# 4. Open a Pull Request on GitHub
-```
-
-### Commit Message Convention
-
-| Prefix | Usage |
-|---|---|
-| `feat` | New feature or extraction capability |
-| `fix` | Bug fix |
-| `refactor` | Code restructuring without behaviour change |
-| `perf` | Performance improvement |
-| `docs` | Documentation update |
-| `chore` | Dependency updates, config changes |
+| :--- | :--- |
+| **Gemini Free Tier Quota** | 20 requests/day. The compact batching strategy keeps typical 24-page documents within 2–3 requests. Heavy single-day usage may approach the ceiling. |
+| **Render Free Tier RAM** | 512MB. Documents exceeding ~150 pages may trigger memory pressure. Tested and stable up to 100 pages. |
+| **Concurrent Users** | `asyncio.Semaphore(2)` limits to 2 parallel Gemini calls. Additional uploads queue behind the semaphore and are processed sequentially. |
+| **PDF Type Support** | Text-layer PDFs only. Scanned image-based PDFs with no embedded text layer will produce empty extraction results unless local OCR is manually configured. |
+| **localStorage Persistence** | Analytics history is stored in the user's browser `localStorage`. Clearing browser data wipes the archive. No server-side history persistence in the current release. |
 
 ---
 
