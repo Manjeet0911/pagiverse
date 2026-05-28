@@ -43,7 +43,7 @@ function Flashcard({ question, answer, index }) {
           flipped ? '[transform:rotateY(180deg)]' : '[transform:rotateY(0deg)]'
         }`}
       >
-        {/* FRONT — Question */}
+        {/* FRONT */}
         <div className="absolute inset-0 w-full h-full bg-white border-2 border-slate-200 p-6 rounded-2xl [backface-visibility:hidden] flex flex-col justify-between shadow-sm hover:border-slate-300 hover:shadow-md transition-all">
           <div>
             <span className="inline-block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 bg-slate-100 px-3 py-1 rounded-full mb-3">
@@ -60,7 +60,7 @@ function Flashcard({ question, answer, index }) {
           </div>
         </div>
 
-        {/* BACK — Answer */}
+        {/* BACK */}
         <div className={`absolute inset-0 w-full h-full border-2 ${answerColor} p-6 rounded-2xl [backface-visibility:hidden] [transform:rotateY(180deg)] flex flex-col justify-between shadow-sm`}>
           <div>
             <span className="inline-block text-[10px] font-black uppercase tracking-[0.2em] opacity-60 bg-black/5 px-3 py-1 rounded-full mb-3">
@@ -77,7 +77,6 @@ function Flashcard({ question, answer, index }) {
   );
 }
 
-// ── MAIN DASHBOARD ──────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
@@ -199,7 +198,7 @@ export default function Dashboard() {
       const response = await fetch(`${API_BASE_URL}/upload`, { method: 'POST', body: formData });
       const result = await response.json();
       if (result && result.id) {
-        setUploadProgress(50);
+        setUploadProgress(40);
         pollAnalytics(result.id, file.name);
       } else {
         alert('Backend sync failed. Please try again.');
@@ -212,15 +211,23 @@ export default function Dashboard() {
     }
   };
 
+  // FIXED POLLING STRATEGY: Enforces absolute timeout limits to avoid infinite stuck loop pipelines
   const pollAnalytics = async (docId, fileName) => {
     let completed = false;
     let attempts = 0;
-    while (!completed && attempts < 25) {
+    const maxAttempts = 30; // 90 seconds timeout break wall
+
+    while (!completed && attempts < maxAttempts) {
       try {
-        setUploadProgress(50 + Math.min(attempts * 2, 45));
+        setUploadProgress(40 + Math.min(attempts * 2, 55));
         await new Promise((r) => setTimeout(r, 3000));
-        const res = await fetch(`${API_BASE_URL}/document/${docId}`);
+        
+        // Native clean state fetch targeting exact API parameters
+        const res = await fetch(`${API_BASE_URL}/document/${docId}`, {
+          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+        });
         const statusCheck = await res.json();
+
         if (statusCheck.status === 'completed') {
           const dataRes = await fetch(`${API_BASE_URL}/document/${docId}/analytics`);
           const result = await dataRes.json();
@@ -247,12 +254,17 @@ export default function Dashboard() {
             if (resultsRef.current) resultsRef.current.scrollIntoView({ behavior: 'smooth' });
           }, 400);
         } else if (statusCheck.status === 'failed') {
+          alert('Analytics Engine processing exception on Render container layer.');
           completed = true;
         }
       } catch (err) {
-        console.error(err);
+        console.error("Polling stream interruption:", err);
       }
       attempts++;
+    }
+    
+    if (!completed) {
+      alert("Pipeline Request Timeout. Shifting thread context. Try loading from Archive Repository.");
     }
     setLoading(false);
   };
@@ -286,22 +298,18 @@ export default function Dashboard() {
     }
   };
 
-  // ── DOWNLOAD PDF REPORT — fetches ALL 6 tab domains into one printable report ──
   const handleDownloadPdfReport = () => {
     if (!data) return;
     setDownloadingPdf(true);
 
     const cheatArr = data.cheat_sheet?.length > 0 ? data.cheat_sheet : data.key_points?.slice(0, 10) || [];
     const summaryBlocks = buildSummaryMap(data.summary);
-
-    const sectionStyle = (bg, accent) =>
-      `background:${bg};border-left:4px solid ${accent};border-radius:12px;padding:20px 24px;margin-bottom:12px;`;
-
+    const sectionStyle = (bg, accent) => `background:${bg};border-left:4px solid ${accent};border-radius:12px;padding:20px 24px;margin-bottom:12px;`;
     const escHtml = (str) => String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-    const summaryHtml = Object.keys(summaryBlocks).map((header, i) => `
+    const summaryHtml = Object.keys(summaryBlocks).map((header) => `
       <div style="margin-bottom:28px;">
-        <div style="display:inline-block;background:#e6f4ea;border:1px solid #a3e635;color:#137333;font-size:10px;font-weight:900;letter-spacing:0.15em;text-transform:uppercase;padding:6px 14px;border-radius:20px;margin-bottom:10px;">✨ ${escHtml(header)}</div>
+        <div style="display:inline-block;background:#e6f4ea;border:1px solid #6ee7b7;color:#137333;font-size:10px;font-weight:900;letter-spacing:0.15em;text-transform:uppercase;padding:6px 14px;border-radius:20px;margin-bottom:10px;">✨ ${escHtml(header)}</div>
         <div style="${sectionStyle('#ffffff','#10b981')}border: 1px solid #e2e8f0;">
           <p style="color:#000000;font-size:15px;font-weight:700;line-height:1.75;white-space:pre-line;margin:0;">${escHtml(summaryBlocks[header].join('\n\n'))}</p>
         </div>
@@ -387,32 +395,26 @@ export default function Dashboard() {
     </div>
     <p style="font-size:12px;color:#94a3b8;font-weight:600;">Generated: ${new Date().toLocaleString()}</p>
   </div>
-
   <div class="section">
     ${sectionHeader('📄', 'Page Summaries — ' + escHtml(dynamicSummaryHighlight), '#10b981')}
     ${summaryHtml}
   </div>
-
   <div class="section">
     ${sectionHeader('📘', 'Deep Insights Matrix', '#38bdf8')}
     ${keyPointsHtml}
   </div>
-
   <div class="section">
     ${sectionHeader('📅', escHtml(dynamicTab3Title), '#fbbf24')}
     ${timelineHtml}
   </div>
-
   <div class="section">
     ${sectionHeader('💬', escHtml(dynamicTab4Title), '#6366f1')}
     ${quotesHtml}
   </div>
-
   <div class="section">
     ${sectionHeader('⚡', 'Exam Cheat-Sheet', '#f43f5e')}
     ${cheatHtml}
   </div>
-
   <div class="section">
     ${sectionHeader('🃏', 'Active Flashcards', '#7c3aed')}
     ${flashcardsHtml}
@@ -432,7 +434,6 @@ export default function Dashboard() {
     setTimeout(() => { URL.revokeObjectURL(url); setDownloadingPdf(false); }, 3000);
   };
 
-  // ── SUMMARY BLOCK BUILDER ──
   const buildSummaryMap = (summaryText) => {
     if (!summaryText) return {};
     const rawLines = summaryText.split('\n');
@@ -461,7 +462,6 @@ export default function Dashboard() {
       return <div className="text-xs font-bold text-slate-400 py-10 text-center tracking-wide">No summary datasets unallocated.</div>;
 
     const pageMap = buildSummaryMap(data.summary);
-
     const badgeColors = [
       'bg-emerald-100 border-emerald-300 text-emerald-800',
       'bg-teal-100 border-teal-300 text-teal-800',
@@ -478,7 +478,6 @@ export default function Dashboard() {
             <span className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] px-4 py-2 rounded-xl border ${badgeColors[index % badgeColors.length]}`}>
               <span className="opacity-70">✦</span> {header}
             </span>
-            {/* 🛠️ FIX APPLIED HERE: Structured with bg-white and text-slate-950 for pure high contrast textbooks visibility */}
             <div className="bg-white border border-slate-200 border-l-4 border-l-emerald-500 rounded-2xl p-6 shadow-sm">
               <p className="text-slate-950 font-black text-base md:text-lg leading-relaxed whitespace-pre-line tracking-wide">
                 {pageMap[header].join('\n\n')}
@@ -492,7 +491,6 @@ export default function Dashboard() {
 
   const cheatSheetArray = data?.cheat_sheet?.length > 0 ? data.cheat_sheet : data?.key_points?.slice(0, 10) || [];
 
-  // ── TAB DEFINITIONS ──
   const tabs = [
     { key: 'summary',     icon: FileText,    label: 'Page Summaries',       sub: 'Granular index bounds',       pal: TAB_PALETTE.summary },
     { key: 'key_points', icon: BookOpen,    label: 'Deep Insights Matrix', sub: 'Micro factual metrics',         pal: TAB_PALETTE.key_points },
@@ -700,7 +698,7 @@ export default function Dashboard() {
               <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
             </div>
 
-            {/* CONTENT GRID: Tab Sidebar + Main Viewport */}
+            {/* CONTENT GRID */}
             <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] min-h-[620px]">
 
               {/* INNER TAB SIDEBAR */}
@@ -739,7 +737,7 @@ export default function Dashboard() {
               {/* MAIN CONTENT VIEWPORT */}
               <main className="p-6 md:p-8 bg-white overflow-y-auto">
 
-                {/* ── PAGE SUMMARIES ── */}
+                {/* PAGE SUMMARIES */}
                 {activeTab === 'summary' && (
                   <div className="space-y-5">
                     <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
@@ -751,7 +749,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* ── DEEP INSIGHTS MATRIX ── */}
+                {/* DEEP INSIGHTS MATRIX */}
                 {activeTab === 'key_points' && (
                   <div className="space-y-4">
                     <div className="pb-3 border-b border-slate-100 mb-5">
@@ -763,14 +761,14 @@ export default function Dashboard() {
                       {data.key_points.map((item, idx) => (
                         <div key={idx} className="flex gap-4 p-4 bg-sky-50 border border-sky-200 border-l-4 border-l-sky-500 rounded-2xl">
                           <span className="text-[11px] font-black text-sky-400 mt-0.5 shrink-0 w-6 text-right">{String(idx + 1).padStart(2, '0')}.</span>
-                          <p className="text-[14px] font-semibold text-slate-900 leading-relaxed">{item}</p>
+                          <p className="text-[14px] font-black text-slate-900 leading-relaxed">{item}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* ── TIMELINE ── */}
+                {/* TIMELINE */}
                 {activeTab === 'timeline' && (
                   <div className="space-y-4">
                     <div className="pb-3 border-b border-slate-100 mb-5">
@@ -782,14 +780,14 @@ export default function Dashboard() {
                       {data.timeline_dates.map((dateEvent, idx) => (
                         <div key={idx} className="relative p-4 bg-amber-50 border border-amber-200 border-l-4 border-l-amber-400 rounded-xl shadow-sm">
                           <div className="absolute -left-[29px] top-4 w-3 h-3 rounded-full bg-amber-400 border-2 border-white shadow-sm" />
-                          <p className="text-[14px] font-semibold text-amber-950 leading-relaxed">{dateEvent}</p>
+                          <p className="text-[14px] font-black text-amber-950 leading-relaxed">{dateEvent}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* ── QUOTES / LAWS / ACTS ── */}
+                {/* QUOTES / LAWS / ACTS */}
                 {activeTab === 'quotes' && (
                   <div className="space-y-4">
                     <div className="pb-3 border-b border-slate-100 mb-5">
@@ -801,14 +799,14 @@ export default function Dashboard() {
                       {data.historians_quotes.map((quoteText, idx) => (
                         <div key={idx} className="relative p-5 bg-indigo-50 border border-indigo-200 border-l-4 border-l-indigo-500 rounded-2xl">
                           <span className="absolute right-4 top-2 text-5xl font-serif text-indigo-200 select-none leading-none">"</span>
-                          <p className="text-[14px] font-semibold text-indigo-950 leading-relaxed pr-8">{quoteText}</p>
+                          <p className="text-[14px] font-black text-indigo-950 leading-relaxed pr-8">{quoteText}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* ── CHEAT SHEET ── */}
+                {/* CHEAT SHEET */}
                 {activeTab === 'cheat_sheet' && (
                   <div className="space-y-4">
                     <div className="pb-3 border-b border-slate-100 mb-5">
@@ -820,14 +818,14 @@ export default function Dashboard() {
                       {cheatSheetArray.map((point, idx) => (
                         <div key={idx} className="flex gap-3 p-4 bg-rose-50 border border-rose-200 border-l-4 border-l-rose-500 rounded-2xl items-start">
                           <span className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />
-                          <p className="text-[14px] font-semibold text-rose-950 leading-relaxed">{point}</p>
+                          <p className="text-[14px] font-black text-rose-950 leading-relaxed">{point}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* ── FLASHCARDS ── */}
+                {/* FLASHCARDS */}
                 {activeTab === 'flashcards' && (
                   <div className="space-y-5">
                     <div className="pb-3 border-b border-slate-100 mb-5 flex items-center justify-between">
