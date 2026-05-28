@@ -297,98 +297,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleDownloadPdfReport = () => {
-    if (!data) return;
-    setDownloadingPdf(true);
-
-    const cheatArr = data.cheat_sheet?.length > 0 ? data.cheat_sheet : data.key_points?.slice(0, 10) || [];
-    const summaryBlocks = buildSummaryMap(data.summary);
-    const escHtml = (str) => String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^\s*[\*\-\+]\s*/gm, '');
-
-    const summaryHtml = Object.keys(summaryBlocks).map((header) => `
-      <div style="margin-bottom:24px;page-break-inside:avoid;">
-        <div style="display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:11px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;padding:5px 12px;border-radius:8px;margin-bottom:8px;font-family:sans-serif;">✨ ${escHtml(header)}</div>
-        <div style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid #10b981;border-radius:12px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-          <p style="color:#030712;font-size:15px;font-weight:800;line-height:1.7;white-space:pre-line;margin:0;font-family:sans-serif;">${escHtml(summaryBlocks[header].join('\n\n'))}</p>
-        </div>
-      </div>
-    `).join('');
-
-    const keyPointsHtml = data.key_points.map((item, idx) => `
-      <div style="background:#f0f9ff;border:1px solid #e0f2fe;border-left:4px solid #0284c7;border-radius:12px;padding:16px;margin-bottom:12px;display:flex;gap:12px;page-break-inside:avoid;font-family:sans-serif;">
-        <span style="color:#0284c7;font-weight:900;font-size:13px;min-width:20px;">${String(idx+1).padStart(2,'0')}.</span>
-        <p style="color:#030712;font-size:14px;font-weight:800;line-height:1.6;margin:0;">${escHtml(item)}</p>
-      </div>
-    `).join('');
-
-    const timelineHtml = data.timeline_dates.map(event => `
-      <div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #d97706;border-radius:12px;padding:16px;margin-bottom:12px;page-break-inside:avoid;font-family:sans-serif;">
-        <p style="color:#451a03;font-size:14px;font-weight:800;line-height:1.6;margin:0;">${escHtml(event)}</p>
-      </div>
-    `).join('');
-
-    const quotesHtml = data.historians_quotes.map(q => `
-      <div style="background:#f5f3ff;border:1px solid #ede9fe;border-left:4px solid #7c3aed;border-radius:12px;padding:18px;margin-bottom:12px;position:relative;page-break-inside:avoid;font-family:sans-serif;">
-        <p style="color:#1e1b4b;font-size:14px;font-weight:800;line-height:1.6;margin:0;font-style:italic;">"${escHtml(q)}"</p>
-      </div>
-    `).join('');
-
-    const cheatHtml = cheatArr.map(point => `
-      <div style="background:#fff1f2;border:1px solid #ffe4e6;border-left:4px solid #f43f5e;border-radius:12px;padding:16px;margin-bottom:12px;page-break-inside:avoid;font-family:sans-serif;">
-        <p style="color:#030712;font-size:14px;font-weight:800;line-height:1.6;margin:0;">${escHtml(point)}</p>
-      </div>
-    `).join('');
-
-    const flashcardsHtml = data.flashcards.map((card, idx) => `
-      <div style="display:flex;gap:12px;margin-bottom:14px;page-break-inside:avoid;font-family:sans-serif;">
-        <div style="flex:1;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
-          <span style="font-size:9px;font-weight:900;color:#64748b;letter-spacing:0.1em;display:block;margin-bottom:4px;">Q${String(idx+1).padStart(2,'0')}</span>
-          <p style="font-size:13px;font-weight:800;color:#0f172a;margin:0;">${escHtml(card.question)}</p>
-        </div>
-        <div style="flex:1;background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:14px;">
-          <span style="font-size:9px;font-weight:900;color:#7c3aed;letter-spacing:0.1em;display:block;margin-bottom:4px;">ANSWER</span>
-          <p style="font-size:13px;font-weight:800;color:#1e1b4b;margin:0;">${escHtml(card.answer)}</p>
-        </div>
-      </div>
-    `).join('');
-
-    const sectionHeader = (title, color) =>
-      `<div style="border-bottom:2px solid ${color};padding-bottom:6px;margin-top:32px;margin-bottom:16px;page-break-after:avoid;font-family:sans-serif;">
-        <h2 style="font-size:18px;font-weight:900;color:#0f172a;margin:0;text-transform:uppercase;letter-spacing:0.02em;">${title}</h2>
-      </div>`;
-
-    const fullHtml = `<html><head><meta charset="utf-8"/><title>Report</title>
-      <style>
-        body { background:#fff; color:#0f172a; padding:36px; font-family:system-ui,sans-serif; }
-        .section { page-break-inside:auto; }
-        @media print { body { padding:10px; } .section { page-break-before:always; } .section:first-of-type { page-break-before:avoid; } }
-      </style></head><body>
-      <div style="padding-bottom:16px;border-bottom:2px solid #10b981;margin-bottom:30px;font-family:sans-serif;">
-        <h1 style="font-size:26px;font-weight:900;margin:0;">Pagiverse</h1>
-        <p style="font-size:11px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em;margin-top:2px;">Full Factual Extraction Dossier</p>
-      </div>
-      <div class="section">${sectionHeader('Page Summaries Document Matrix', '#10b981')}${summaryHtml}</div>
-      <div class="section">${sectionHeader('Deep Insights Core Matrix', '#0284c7')}${keyPointsHtml}</div>
-      <div class="section">${sectionHeader(dynamicTab3Title, '#d97706')}${timelineHtml}</div>
-      <div class="section">${sectionHeader(dynamicTab4Title, '#7c3aed')}${quotesHtml}</div>
-      <div class="section">${sectionHeader('Exam High-Weightage Cheat-Sheet', '#f43f5e')}${cheatHtml}</div>
-      <div class="section">${sectionHeader('Active Revision Flashcards', '#6b21a8')}${flashcardsHtml}</div>
-      </body></html>`;
-
-    const printWin = window.open('', '_blank');
-    if (printWin) {
-      printWin.document.write(fullHtml);
-      printWin.document.close();
-      printWin.focus();
-      setTimeout(() => {
-        printWin.print();
-        setDownloadingPdf(false);
-      }, 600);
-    } else {
-      setDownloadingPdf(false);
-    }
-  };
-
   const buildSummaryMap = (summaryText) => {
     if (!summaryText) return {};
     const rawLines = summaryText.split('\n');
@@ -427,6 +335,111 @@ export default function Dashboard() {
     }
 
     return pageMap;
+  };
+
+  const handleDownloadPdfReport = () => {
+    if (!data) return;
+    setDownloadingPdf(true);
+
+    try {
+      const cheatArr = data.cheat_sheet?.length > 0 ? data.cheat_sheet : data.key_points?.slice(0, 10) || [];
+      const summaryBlocks = buildSummaryMap(data.summary);
+      const escHtml = (str) => String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^\s*[\*\-\+]\s*/gm, '');
+
+      let summaryHtml = '';
+      if (Object.keys(summaryBlocks).length > 0) {
+        summaryHtml = Object.keys(summaryBlocks).map((header) => {
+          if (!summaryBlocks[header] || summaryBlocks[header].length === 0) return '';
+          return `
+            <div style="margin-bottom:24px;page-break-inside:avoid;">
+              <div style="display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:11px;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;padding:5px 12px;border-radius:8px;margin-bottom:8px;font-family:sans-serif;">✨ ${escHtml(header)}</div>
+              <div style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid #10b981;border-radius:12px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                <p style="color:#030712;font-size:15px;font-weight:800;line-height:1.7;white-space:pre-line;margin:0;font-family:sans-serif;">${escHtml(summaryBlocks[header].join('\n\n'))}</p>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const keyPointsHtml = Array.isArray(data.key_points) ? data.key_points.map((item, idx) => `
+        <div style="background:#f0f9ff;border:1px solid #e0f2fe;border-left:4px solid #0284c7;border-radius:12px;padding:16px;margin-bottom:12px;display:flex;gap:12px;page-break-inside:avoid;font-family:sans-serif;">
+          <span style="color:#0284c7;font-weight:900;font-size:13px;min-width:20px;">${String(idx+1).padStart(2,'0')}.</span>
+          <p style="color:#030712;font-size:14px;font-weight:800;line-height:1.6;margin:0;">${escHtml(item)}</p>
+        </div>
+      `).join('') : '';
+
+      const timelineHtml = Array.isArray(data.timeline_dates) ? data.timeline_dates.map(event => `
+        <div style="background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #d97706;border-radius:12px;padding:16px;margin-bottom:12px;page-break-inside:avoid;font-family:sans-serif;">
+          <p style="color:#451a03;font-size:14px;font-weight:800;line-height:1.6;margin:0;">${escHtml(event)}</p>
+        </div>
+      `).join('') : '';
+
+      const quotesHtml = Array.isArray(data.historians_quotes) ? data.historians_quotes.map(q => `
+        <div style="background:#f5f3ff;border:1px solid #ede9fe;border-left:4px solid #7c3aed;border-radius:12px;padding:18px;margin-bottom:12px;position:relative;page-break-inside:avoid;font-family:sans-serif;">
+          <p style="color:#1e1b4b;font-size:14px;font-weight:800;line-height:1.6;margin:0;font-style:italic;">"${escHtml(q)}"</p>
+        </div>
+      `).join('') : '';
+
+      const cheatHtml = Array.isArray(cheatArr) ? cheatArr.map(point => `
+        <div style="background:#fff1f2;border:1px solid #ffe4e6;border-left:4px solid #f43f5e;border-radius:12px;padding:16px;margin-bottom:12px;page-break-inside:avoid;font-family:sans-serif;">
+          <p style="color:#030712;font-size:14px;font-weight:800;line-height:1.6;margin:0;">${escHtml(point)}</p>
+        </div>
+      `).join('') : '';
+
+      const flashcardsHtml = Array.isArray(data.flashcards) ? data.flashcards.map((card, idx) => `
+        <div style="display:flex;gap:12px;margin-bottom:14px;page-break-inside:avoid;font-family:sans-serif;">
+          <div style="flex:1;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
+            <span style="font-size:9px;font-weight:900;color:#64748b;letter-spacing:0.1em;display:block;margin-bottom:4px;">Q${String(idx+1).padStart(2,'0')}</span>
+            <p style="font-size:13px;font-weight:800;color:#0f172a;margin:0;">${escHtml(card.question)}</p>
+          </div>
+          <div style="flex:1;background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:14px;">
+            <span style="font-size:9px;font-weight:900;color:#7c3aed;letter-spacing:0.1em;display:block;margin-bottom:4px;">ANSWER</span>
+            <p style="font-size:13px;font-weight:800;color:#1e1b4b;margin:0;">${escHtml(card.answer)}</p>
+          </div>
+        </div>
+      `).join('') : '';
+
+      const sectionHeader = (title, color) =>
+        `<div style="border-bottom:2px solid ${color};padding-bottom:6px;margin-top:32px;margin-bottom:16px;page-break-after:avoid;font-family:sans-serif;">
+          <h2 style="font-size:18px;font-weight:900;color:#0f172a;margin:0;text-transform:uppercase;letter-spacing:0.02em;">${title}</h2>
+        </div>`;
+
+      const fullHtml = `<html><head><meta charset="utf-8"/><title>Report</title>
+        <style>
+          body { background:#fff; color:#0f172a; padding:36px; font-family:system-ui,sans-serif; }
+          .section { page-break-inside:auto; }
+          @media print { body { padding:10px; } .section { page-break-before:always; } .section:first-of-type { page-break-before:avoid; } }
+        </style></head><body>
+        <div style="padding-bottom:16px;border-bottom:2px solid #10b981;margin-bottom:30px;font-family:sans-serif;">
+          <h1 style="font-size:26px;font-weight:900;margin:0;">Pagiverse</h1>
+          <p style="font-size:11px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:0.1em;margin-top:2px;">Full Factual Extraction Dossier</p>
+        </div>
+        ${summaryHtml ? `<div class="section">${sectionHeader('Page Summaries Document Matrix', '#10b981')}${summaryHtml}</div>` : ''}
+        ${keyPointsHtml ? `<div class="section">${sectionHeader('Deep Insights Core Matrix', '#0284c7')}${keyPointsHtml}</div>` : ''}
+        ${timelineHtml ? `<div class="section">${sectionHeader(dynamicTab3Title, '#d97706')}${timelineHtml}</div>` : ''}
+        ${quotesHtml ? `<div class="section">${sectionHeader(dynamicTab4Title, '#7c3aed')}${quotesHtml}</div>` : ''}
+        ${cheatHtml ? `<div class="section">${sectionHeader('Exam High-Weightage Cheat-Sheet', '#f43f5e')}${cheatHtml}</div>` : ''}
+        ${flashcardsHtml ? `<div class="section">${sectionHeader('Active Revision Flashcards', '#6b21a8')}${flashcardsHtml}</div>` : ''}
+        </body></html>`;
+
+      const printWin = window.open('', '_blank');
+      if (printWin) {
+        printWin.document.write(fullHtml);
+        printWin.document.close();
+        printWin.focus();
+        setTimeout(() => {
+          printWin.print();
+          setDownloadingPdf(false);
+        }, 600);
+      } else {
+        alert("Popup blocker enabled! Please allow popups for this site to print PDF.");
+        setDownloadingPdf(false);
+      }
+    } catch (err) {
+      console.error("PDF Compiling error: ", err);
+      alert("Error generating report. Check console formatting.");
+      setDownloadingPdf(false);
+    }
   };
 
   const renderSummaryBlocks = () => {
@@ -571,7 +584,6 @@ export default function Dashboard() {
                           key={key}
                           onClick={() => {
                             setActiveTab(key);
-                            // Smooth scroll setup to target exact segment bounds natively
                             if (resultsRef.current) {
                               resultsRef.current.scrollIntoView({ behavior: 'smooth' });
                             }
@@ -669,7 +681,6 @@ export default function Dashboard() {
         {/* ── RESULTS PANEL ── */}
         {data && !loading && (
           <div ref={resultsRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex-1">
-            {/* 🛠️ 100% CLEAN RESULTS CORE: Removed the duplicate tabs panel grid section to completely drop layout duplication */}
             <div className="p-6 md:p-8 space-y-10 bg-white">
 
               {/* PAGE SUMMARIES */}
@@ -680,7 +691,7 @@ export default function Dashboard() {
               )}
 
               {/* DEEP INSIGHTS MATRIX */}
-              {activeTab === 'key_points' && data.key_points.length > 0 && (
+              {activeTab === 'key_points' && data.key_points && data.key_points.length > 0 && (
                 <section className="space-y-4 animate-fadeIn">
                   <div className="grid grid-cols-1 gap-3">
                     {data.key_points.map((item, idx) => (
@@ -694,7 +705,7 @@ export default function Dashboard() {
               )}
 
               {/* TIMELINE */}
-              {activeTab === 'timeline' && data.timeline_dates.length > 0 && (
+              {activeTab === 'timeline' && data.timeline_dates && data.timeline_dates.length > 0 && (
                 <section className="space-y-4 animate-fadeIn">
                   <div className="border-l-2 border-amber-300 pl-5 ml-2 space-y-3 relative">
                     {data.timeline_dates.map((dateEvent, idx) => (
@@ -708,7 +719,7 @@ export default function Dashboard() {
               )}
 
               {/* QUOTES / LAWS / ACTS */}
-              {activeTab === 'quotes' && data.historians_quotes.length > 0 && (
+              {activeTab === 'quotes' && data.historians_quotes && data.historians_quotes.length > 0 && (
                 <section className="space-y-4 animate-fadeIn">
                   <div className="grid grid-cols-1 gap-4">
                     {data.historians_quotes.map((quoteText, idx) => (
@@ -736,7 +747,7 @@ export default function Dashboard() {
               )}
 
               {/* FLASHCARDS */}
-              {activeTab === 'flashcards' && data.flashcards.length > 0 && (
+              {activeTab === 'flashcards' && data.flashcards && data.flashcards.length > 0 && (
                 <section className="space-y-5 animate-fadeIn">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     {data.flashcards.map((cardItem, idx) => (
