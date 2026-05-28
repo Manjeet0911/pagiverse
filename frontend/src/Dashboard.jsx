@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText, Upload, Sparkles, Calendar, BookOpen,
-  Layers, HelpCircle, ChevronRight, Check, ArrowRight, 
-  X, Trash2, History, PanelLeftClose, PanelLeftOpen, 
+  Layers, HelpCircle, ChevronRight, Check, ArrowRight,
+  X, Trash2, History, PanelLeftClose, PanelLeftOpen,
   ChevronDown, ChevronUp
 } from 'lucide-react';
 
@@ -86,7 +86,6 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('summary');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [navCollapsed, setNavCollapsed] = useState(false);
   const [historyList, setHistoryList] = useState([]);
 
   const [dynamicTab3Title, setDynamicTab3Title] = useState('Timeline & Chronology');
@@ -212,17 +211,19 @@ export default function Dashboard() {
     }, 12000);
   };
 
-  // 🔥 HIGH-PERFORMANCE SCHEDULER REQUEST POLLING ENGINE (PREVENTS FORCED REFLOW BREAKS)
+  // 🔥 HIGH-PERFORMANCE SCHEDULER REQUEST POLLING ENGINE
+  // maxAttempts set to 150 to fully accommodate 24-page high-volume text array payloads
+  // without prematurely cutting off or triggering an incomplete page fallback artifact
   const pollAnalytics = async (docId, fileName) => {
     let completed = false;
     let attempts = 0;
-    const maxAttempts = 120; 
+    const maxAttempts = 150;
 
     while (!completed && attempts < maxAttempts) {
       try {
-        setUploadProgress(40 + Math.min(attempts * 0.5, 59));
+        setUploadProgress(40 + Math.min(attempts * 0.4, 59));
         await new Promise((r) => setTimeout(r, 3500));
-        
+
         const res = await fetch(`${API_BASE_URL}/document/${docId}`, {
           headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
         });
@@ -240,7 +241,7 @@ export default function Dashboard() {
               cheat_sheet: Array.isArray(result.cheat_sheet) ? result.cheat_sheet : [],
               flashcards: Array.isArray(result.flashcards) ? result.flashcards : [],
             };
-            
+
             // 🛑 USE REQUESTANIMATIONFRAME TO SAFELY COMMIT STATE WITHOUT BLOCKING RENDER FLUIDITY
             window.requestAnimationFrame(() => {
               setData(parsedData);
@@ -356,9 +357,7 @@ export default function Dashboard() {
       <div className="space-y-6">
         {Object.keys(pageMap).map((header, index) => {
           if (pageMap[header].length === 0) return null;
-          
           const flatTextSummary = pageMap[header].join(' ').replace(/\s+/g, ' ').trim();
-
           return (
             <div key={index} className="space-y-3">
               <span className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] px-4 py-2 rounded-xl border ${badgeColors[index % badgeColors.length]}`}>
@@ -377,15 +376,6 @@ export default function Dashboard() {
   };
 
   const cheatSheetArray = data?.cheat_sheet?.length > 0 ? data.cheat_sheet : data?.key_points?.slice(0, 10) || [];
-
-  const tabs = [
-    { key: 'summary',     icon: FileText,    label: 'Page Summaries',       sub: 'Granular index bounds',       pal: TAB_PALETTE.summary },
-    { key: 'key_points', icon: BookOpen,    label: 'Deep Insights Matrix', sub: 'Micro factual metrics',         pal: TAB_PALETTE.key_points },
-    { key: 'timeline',   icon: Calendar,    label: dynamicTab3Title,       sub: 'Chronology benchmarks',        pal: TAB_PALETTE.timeline },
-    { key: 'quotes',     icon: Layers,      label: dynamicTab4Title,       sub: 'Verbatim high weightage indices', pal: TAB_PALETTE.quotes },
-    { key: 'cheat_sheet',icon: Sparkles,    label: 'Exam Cheat-Sheet',     sub: 'Formula blocks compiler',       pal: TAB_PALETTE.cheat_sheet },
-    { key: 'flashcards', icon: HelpCircle,  label: 'Active Flashcards',    sub: 'Interactive testing matrix',    pal: TAB_PALETTE.flashcards },
-  ];
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 selection:bg-emerald-200 p-4 md:p-6" style={{ fontFamily: "'DM Sans', 'Outfit', system-ui, sans-serif" }}>
@@ -453,52 +443,6 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* COLLAPSIBLE NAV LIST SLIDER */}
-            {data && (
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                <button
-                  onClick={() => setNavCollapsed(!navCollapsed)}
-                  className="w-full flex items-center justify-between px-5 py-3.5 text-[11px] font-black text-slate-500 uppercase tracking-[0.15em] hover:bg-slate-50 transition-colors"
-                >
-                  <span>Navigation Views</span>
-                  {navCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-                </button>
-                {!navCollapsed && (
-                  <div className="px-3 pb-3 space-y-1.5 border-t border-slate-100">
-                    {tabs.map(({ key, icon: Icon, label, sub, pal }) => {
-                      const isActive = activeTab === key;
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => setActiveTab(key)}
-                          className={`w-full text-left px-3.5 py-3 rounded-xl border transition-all flex items-center justify-between group ${
-                            isActive
-                              ? `${pal.bg} ${pal.border} shadow-sm font-black`
-                              : 'bg-slate-50/50 border-transparent hover:bg-slate-50 hover:border-slate-200'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <Icon size={14} className={isActive ? pal.label : 'text-slate-400'} />
-                            <div className="truncate">
-                              <p className={`text-[11px] font-black tracking-tight truncate ${isActive ? 'text-slate-900 font-black' : 'text-slate-600'}`}>{label}</p>
-                              <p className={`text-[9px] font-semibold truncate ${isActive ? 'text-slate-500' : 'text-slate-400'}`}>{sub}</p>
-                            </div>
-                          </div>
-                          {key === 'flashcards' ? (
-                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 ${pal.badge}`}>
-                              {data.flashcards?.length || 0}
-                            </span>
-                          ) : (
-                            <ChevronRight size={11} className={`shrink-0 transition-transform ${isActive ? pal.label : 'text-slate-200'} group-hover:translate-x-0.5`} />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* ANALYSIS ARCHIVE REPOSITORY */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
               <div className="flex justify-between items-center mb-3">
@@ -549,7 +493,7 @@ export default function Dashboard() {
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
-              <span className="text-[11px] font-black text-slate-400 tracking-wider">{uploadProgress}% COMPILED</span>
+              <span className="text-[11px] font-black text-slate-400 tracking-wider">{Math.round(uploadProgress)}% COMPILED</span>
             </div>
             <div className="w-11 h-11 border-[3px] border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
             <div>
@@ -564,119 +508,105 @@ export default function Dashboard() {
         {/* ── RESULTS PANEL ── */}
         {data && !loading && (
           <div ref={resultsRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] min-h-[620px]">
+            <div className="p-6 md:p-8 space-y-10">
 
-              {/* INNER TAB SIDEBAR */}
-              <aside className="bg-slate-50/60 border-r border-slate-100 p-3 space-y-1.5 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
-                {tabs.map(({ key, icon: Icon, label, sub, pal }) => {
-                  const isActive = activeTab === key;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setActiveTab(key)}
-                      className={`w-full text-left px-3.5 py-3 rounded-xl border transition-all flex items-center justify-between group ${
-                        isActive
-                          ? `${pal.bg} ${pal.border} shadow-sm font-black`
-                          : 'bg-white/60 border-transparent hover:bg-white hover:border-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Icon size={14} className={isActive ? pal.label : 'text-slate-400'} />
-                        <div className="truncate">
-                          <p className={`text-[11px] font-black tracking-tight truncate leading-tight ${isActive ? 'text-slate-900 font-black' : 'text-slate-600'}`}>{label}</p>
-                          <p className={`text-[9px] font-semibold truncate leading-tight mt-0.5 ${isActive ? 'text-slate-500' : 'text-slate-300'}`}>{sub}</p>
-                        </div>
+              {/* PAGE SUMMARIES */}
+              <section>
+                {renderSummaryBlocks()}
+              </section>
+
+              {/* DEEP INSIGHTS MATRIX */}
+              {data.key_points.length > 0 && (
+                <section className="space-y-4">
+                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <BookOpen size={15} className="text-sky-500" />
+                    <h2 className="text-sm font-black text-slate-800 uppercase tracking-[0.12em]">Deep Insights Matrix</h2>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3">
+                    {data.key_points.map((item, idx) => (
+                      <div key={idx} className="flex gap-4 p-4 bg-sky-50 border border-sky-200 border-l-4 border-l-sky-500 rounded-2xl">
+                        <span className="text-[11px] font-black text-sky-400 mt-0.5 shrink-0 w-6 text-right">{String(idx + 1).padStart(2, '0')}.</span>
+                        <p className="text-[14px] font-black text-slate-900 leading-relaxed">{item}</p>
                       </div>
-                      {key === 'flashcards' ? (
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 ml-1 ${pal.badge}`}>
-                          {data.flashcards?.length || 0}
-                        </span>
-                      ) : (
-                        <ChevronRight size={11} className={`shrink-0 transition-transform ${isActive ? pal.label : 'text-slate-200'} group-hover:translate-x-0.5`} />
-                      )}
-                    </button>
-                  );
-                })}
-              </aside>
-
-              {/* MAIN CONTENT VIEWPORT */}
-              <main className="p-6 md:p-8 bg-white overflow-y-auto">
-
-                {/* PAGE SUMMARIES */}
-                {activeTab === 'summary' && (
-                  <div className="space-y-5">
-                    {renderSummaryBlocks()}
+                    ))}
                   </div>
-                )}
+                </section>
+              )}
 
-                {/* DEEP INSIGHTS MATRIX */}
-                {activeTab === 'key_points' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-3">
-                      {data.key_points.map((item, idx) => (
-                        <div key={idx} className="flex gap-4 p-4 bg-sky-50 border border-sky-200 border-l-4 border-l-sky-500 rounded-2xl">
-                          <span className="text-[11px] font-black text-sky-400 mt-0.5 shrink-0 w-6 text-right">{String(idx + 1).padStart(2, '0')}.</span>
-                          <p className="text-[14px] font-black text-slate-900 leading-relaxed">{item}</p>
-                        </div>
-                      ))}
+              {/* TIMELINE */}
+              {data.timeline_dates.length > 0 && (
+                <section className="space-y-4">
+                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <Calendar size={15} className="text-amber-500" />
+                    <h2 className="text-sm font-black text-slate-800 uppercase tracking-[0.12em]">{dynamicTab3Title}</h2>
+                  </div>
+                  <div className="border-l-2 border-amber-300 pl-5 ml-2 space-y-3 relative">
+                    {data.timeline_dates.map((dateEvent, idx) => (
+                      <div key={idx} className="relative p-4 bg-amber-50 border border-amber-200 border-l-4 border-l-amber-400 rounded-xl shadow-sm">
+                        <div className="absolute -left-[29px] top-4 w-3 h-3 rounded-full bg-amber-400 border-2 border-white shadow-sm" />
+                        <p className="text-[14px] font-black text-amber-950 leading-relaxed">{dateEvent}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* QUOTES / LAWS / ACTS */}
+              {data.historians_quotes.length > 0 && (
+                <section className="space-y-4">
+                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <Layers size={15} className="text-indigo-500" />
+                    <h2 className="text-sm font-black text-slate-800 uppercase tracking-[0.12em]">{dynamicTab4Title}</h2>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4">
+                    {data.historians_quotes.map((quoteText, idx) => (
+                      <div key={idx} className="relative p-5 bg-indigo-50 border border-indigo-200 border-l-4 border-l-indigo-500 rounded-2xl">
+                        <span className="absolute right-4 top-2 text-5xl font-serif text-indigo-200 select-none leading-none">"</span>
+                        <p className="text-[14px] font-black text-indigo-950 leading-relaxed pr-8">{quoteText}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* CHEAT SHEET */}
+              {cheatSheetArray.length > 0 && (
+                <section className="space-y-4">
+                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <Sparkles size={15} className="text-rose-500" />
+                    <h2 className="text-sm font-black text-slate-800 uppercase tracking-[0.12em]">Exam Cheat-Sheet</h2>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3">
+                    {cheatSheetArray.map((point, idx) => (
+                      <div key={idx} className="flex gap-3 p-4 bg-rose-50 border border-rose-200 border-l-4 border-l-rose-500 rounded-2xl items-start">
+                        <span className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />
+                        <p className="text-[14px] font-black text-rose-950 leading-relaxed">{point}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* FLASHCARDS */}
+              {data.flashcards.length > 0 && (
+                <section className="space-y-5">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <HelpCircle size={15} className="text-purple-500" />
+                      <h2 className="text-sm font-black text-slate-800 uppercase tracking-[0.12em]">Active Flashcards</h2>
                     </div>
+                    <span className="text-[10px] font-black text-purple-700 bg-purple-100 border border-purple-200 px-3 py-1 rounded-full">
+                      {data.flashcards.length} CARDS
+                    </span>
                   </div>
-                )}
-
-                {/* TIMELINE */}
-                {activeTab === 'timeline' && (
-                  <div className="space-y-4">
-                    <div className="border-l-2 border-amber-300 pl-5 ml-2 space-y-3 relative">
-                      {data.timeline_dates.map((dateEvent, idx) => (
-                        <div key={idx} className="relative p-4 bg-amber-50 border border-amber-200 border-l-4 border-l-amber-400 rounded-xl shadow-sm">
-                          <div className="absolute -left-[29px] top-4 w-3 h-3 rounded-full bg-amber-400 border-2 border-white shadow-sm" />
-                          <p className="text-[14px] font-black text-amber-950 leading-relaxed">{dateEvent}</p>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {data.flashcards.map((cardItem, idx) => (
+                      <Flashcard key={idx} index={idx} question={cardItem.question} answer={cardItem.answer} />
+                    ))}
                   </div>
-                )}
+                </section>
+              )}
 
-                {/* QUOTES / LAWS / ACTS */}
-                {activeTab === 'quotes' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4">
-                      {data.historians_quotes.map((quoteText, idx) => (
-                        <div key={idx} className="relative p-5 bg-indigo-50 border border-indigo-200 border-l-4 border-l-indigo-500 rounded-2xl">
-                          <span className="absolute right-4 top-2 text-5xl font-serif text-indigo-200 select-none leading-none">"</span>
-                          <p className="text-[14px] font-black text-indigo-950 leading-relaxed pr-8">{quoteText}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* CHEAT SHEET */}
-                {activeTab === 'cheat_sheet' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-3">
-                      {cheatSheetArray.map((point, idx) => (
-                        <div key={idx} className="flex gap-3 p-4 bg-rose-50 border border-rose-200 border-l-4 border-l-rose-500 rounded-2xl items-start">
-                          <span className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />
-                          <p className="text-[14px] font-black text-rose-950 leading-relaxed">{point}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* FLASHCARDS */}
-                {activeTab === 'flashcards' && (
-                  <div className="space-y-5">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      {data.flashcards.map((cardItem, idx) => (
-                        <Flashcard key={idx} index={idx} question={cardItem.question} answer={cardItem.answer} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-              </main>
             </div>
           </div>
         )}
