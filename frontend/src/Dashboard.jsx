@@ -12,7 +12,7 @@ const API_BASE_URL = "https://pagiverse.onrender.com";
 // ── TAB COLOR PALETTES ──────────────────────────────────────────────────────
 const TAB_PALETTE = {
   summary:    { bg: 'bg-emerald-50',  border: 'border-emerald-200',  accent: 'border-l-emerald-500',  badge: 'bg-emerald-100 border-emerald-300 text-emerald-800',  label: 'text-emerald-700',  dot: 'bg-emerald-400' },
-  key_points: { bg: 'bg-sky-50',      border: 'border-sky-200',      accent: 'border-l-sky-500',      badge: 'bg-sky-100 border-sky-300 text-sky-800',              label: 'text-sky-700',      dot: 'bg-sky-400' },
+  key_points: { bg: 'bg-sky-50',      border: 'border-sky-200',      accent: 'border-l-sky-500',      badge: 'bg-sky-100 border-sky-300 text-sky-800',              label: 'text-sky-700',    dot: 'bg-sky-400' },
   timeline:   { bg: 'bg-amber-50',    border: 'border-amber-200',    accent: 'border-l-amber-500',    badge: 'bg-amber-100 border-amber-300 text-amber-800',         label: 'text-amber-700',    dot: 'bg-amber-400' },
   quotes:     { bg: 'bg-indigo-50',   border: 'border-indigo-200',   accent: 'border-l-indigo-500',   badge: 'bg-indigo-100 border-indigo-300 text-indigo-800',      label: 'text-indigo-700',   dot: 'bg-indigo-400' },
   cheat_sheet:{ bg: 'bg-rose-50',     border: 'border-rose-200',     accent: 'border-l-rose-500',     badge: 'bg-rose-100 border-rose-300 text-rose-800',            label: 'text-rose-700',     dot: 'bg-rose-400' },
@@ -66,7 +66,7 @@ function Flashcard({ question, answer, index }) {
             <span className="inline-block text-[10px] font-black uppercase tracking-[0.2em] opacity-60 bg-black/5 px-3 py-1 rounded-full mb-3">
               ANSWER
             </span>
-            <p className="text-[15px] font-black leading-relaxed overflow-y-auto max-h-36 no-scrollbar">
+            <p className="text-[15px] font-black leading-relaxed overflow-y-auto max-h-32 no-scrollbar">
               {answer}
             </p>
           </div>
@@ -292,7 +292,6 @@ export default function Dashboard() {
     setDownloadingPdf(true);
 
     const cheatArr = data.cheat_sheet?.length > 0 ? data.cheat_sheet : data.key_points?.slice(0, 10) || [];
-
     const summaryBlocks = buildSummaryMap(data.summary);
 
     const sectionStyle = (bg, accent) =>
@@ -302,9 +301,9 @@ export default function Dashboard() {
 
     const summaryHtml = Object.keys(summaryBlocks).map((header, i) => `
       <div style="margin-bottom:28px;">
-        <div style="display:inline-block;background:#d1fae5;border:1px solid #6ee7b7;color:#065f46;font-size:10px;font-weight:900;letter-spacing:0.15em;text-transform:uppercase;padding:6px 14px;border-radius:20px;margin-bottom:10px;">✨ ${escHtml(header)}</div>
-        <div style="${sectionStyle('#f0fdf4','#10b981')}">
-          <p style="color:#0f172a;font-size:14px;font-weight:700;line-height:1.75;white-space:pre-line;margin:0;">${escHtml(summaryBlocks[header].join('\n\n'))}</p>
+        <div style="display:inline-block;background:#e6f4ea;border:1px solid #a3e635;color:#137333;font-size:10px;font-weight:900;letter-spacing:0.15em;text-transform:uppercase;padding:6px 14px;border-radius:20px;margin-bottom:10px;">✨ ${escHtml(header)}</div>
+        <div style="${sectionStyle('#ffffff','#10b981')}border: 1px solid #e2e8f0;">
+          <p style="color:#000000;font-size:15px;font-weight:700;line-height:1.75;white-space:pre-line;margin:0;">${escHtml(summaryBlocks[header].join('\n\n'))}</p>
         </div>
       </div>
     `).join('');
@@ -479,8 +478,9 @@ export default function Dashboard() {
             <span className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] px-4 py-2 rounded-xl border ${badgeColors[index % badgeColors.length]}`}>
               <span className="opacity-70">✦</span> {header}
             </span>
-            <div className="bg-emerald-50 border border-emerald-200 border-l-4 border-l-emerald-500 rounded-2xl p-6 shadow-sm">
-              <p className="text-slate-950 font-semibold text-[15px] leading-relaxed whitespace-pre-line tracking-wide">
+            {/* 🛠️ FIX APPLIED HERE: Structured with bg-white and text-slate-950 for pure high contrast textbooks visibility */}
+            <div className="bg-white border border-slate-200 border-l-4 border-l-emerald-500 rounded-2xl p-6 shadow-sm">
+              <p className="text-slate-950 font-black text-base md:text-lg leading-relaxed whitespace-pre-line tracking-wide">
                 {pageMap[header].join('\n\n')}
               </p>
             </div>
@@ -494,7 +494,7 @@ export default function Dashboard() {
 
   // ── TAB DEFINITIONS ──
   const tabs = [
-    { key: 'summary',    icon: FileText,    label: 'Page Summaries',       sub: 'Granular index bounds',         pal: TAB_PALETTE.summary },
+    { key: 'summary',     icon: FileText,    label: 'Page Summaries',       sub: 'Granular index bounds',       pal: TAB_PALETTE.summary },
     { key: 'key_points', icon: BookOpen,    label: 'Deep Insights Matrix', sub: 'Micro factual metrics',         pal: TAB_PALETTE.key_points },
     { key: 'timeline',   icon: Calendar,    label: dynamicTab3Title,       sub: dynamicTab3Sub,                  pal: TAB_PALETTE.timeline },
     { key: 'quotes',     icon: Layers,      label: dynamicTab4Title,       sub: dynamicTab4Sub,                  pal: TAB_PALETTE.quotes },
@@ -614,7 +614,7 @@ export default function Dashboard() {
                               {data.flashcards?.length || 0}
                             </span>
                           ) : (
-                            <ChevronRight size={11} className={`shrink-0 transition-transform ${isActive ? pal.label : 'text-slate-300'} group-hover:translate-x-0.5`} />
+                            <ChevronRight size={11} className={`shrink-0 transition-transform ${isActive ? pal.label : 'text-slate-200'} group-hover:translate-x-0.5`} />
                           )}
                         </button>
                       );
