@@ -212,11 +212,10 @@ export default function Dashboard() {
     }, 12000);
   };
 
-  // 🔥 EXTENDED STRETCH POLLING WALL: Solves large 25+ pages indexing tracking timeout leaks permanently
   const pollAnalytics = async (docId, fileName) => {
     let completed = false;
     let attempts = 0;
-    const maxAttempts = 120; // 6 Full Minutes persistent track wall
+    const maxAttempts = 120; 
 
     while (!completed && attempts < maxAttempts) {
       try {
@@ -360,8 +359,9 @@ export default function Dashboard() {
               <span className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] px-4 py-2 rounded-xl border ${badgeColors[index % badgeColors.length]}`}>
                 <span className="opacity-70">✦</span> {header}
               </span>
+              {/* 🛑 BALANCED BALANCED TEXT DESIGN LEVEL MATCHED HERE */}
               <div className="bg-white border border-slate-200 border-l-4 border-l-emerald-500 rounded-2xl p-6 shadow-sm">
-                <p className="text-slate-900 font-black text-base md:text-lg leading-relaxed text-justify tracking-normal whitespace-normal">
+                <p className="text-slate-800 font-semibold text-sm md:text-[15px] leading-relaxed text-justify tracking-normal whitespace-normal">
                   {flatTextSummary}
                 </p>
               </div>
@@ -560,7 +560,7 @@ export default function Dashboard() {
         {/* ── RESULTS PANEL ── */}
         {data && !loading && (
           <div ref={resultsRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            {/* 🛠️ STRICT DELETION: Entirely stripped the broken static banner section node here to achieve 100% clean canvas layout */}
+            {/* 🛑 BANNER COMPLETELY REMOVED FROM RENDER REEL HERE */}
             <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] min-h-[620px]">
 
               {/* INNER TAB SIDEBAR */}
