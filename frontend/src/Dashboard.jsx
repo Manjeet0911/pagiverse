@@ -1,62 +1,83 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText, Upload, Sparkles, Calendar, BookOpen,
-  Layers, HelpCircle, CheckCircle2, ChevronRight, Copy, Check,
-  Maximize2, Minimize2, ArrowRight, X, Trash2, Printer, History,
-  PanelLeftClose, PanelLeftOpen
+  Layers, HelpCircle, CheckCircle2, ChevronRight,
+  Check, ArrowRight, X, Trash2, History,
+  PanelLeftClose, PanelLeftOpen, Download, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 // 🚀 PRODUCTION LIVE BACKEND CLUSTER ENDPOINT
 const API_BASE_URL = "https://pagiverse.onrender.com";
 
-// --- INTERACTIVE FLASHCARD CARD SUB-SYSTEM ---
+// ── TAB COLOR PALETTES ──────────────────────────────────────────────────────
+const TAB_PALETTE = {
+  summary:    { bg: 'bg-emerald-50',  border: 'border-emerald-200',  accent: 'border-l-emerald-500',  badge: 'bg-emerald-100 border-emerald-300 text-emerald-800',  label: 'text-emerald-700',  dot: 'bg-emerald-400' },
+  key_points: { bg: 'bg-sky-50',      border: 'border-sky-200',      accent: 'border-l-sky-500',      badge: 'bg-sky-100 border-sky-300 text-sky-800',              label: 'text-sky-700',      dot: 'bg-sky-400' },
+  timeline:   { bg: 'bg-amber-50',    border: 'border-amber-200',    accent: 'border-l-amber-500',    badge: 'bg-amber-100 border-amber-300 text-amber-800',         label: 'text-amber-700',    dot: 'bg-amber-400' },
+  quotes:     { bg: 'bg-indigo-50',   border: 'border-indigo-200',   accent: 'border-l-indigo-500',   badge: 'bg-indigo-100 border-indigo-300 text-indigo-800',      label: 'text-indigo-700',   dot: 'bg-indigo-400' },
+  cheat_sheet:{ bg: 'bg-rose-50',     border: 'border-rose-200',     accent: 'border-l-rose-500',     badge: 'bg-rose-100 border-rose-300 text-rose-800',            label: 'text-rose-700',     dot: 'bg-rose-400' },
+  flashcards: { bg: 'bg-purple-50',   border: 'border-purple-200',   accent: 'border-l-purple-500',   badge: 'bg-purple-100 border-purple-300 text-purple-800',      label: 'text-purple-700',   dot: 'bg-purple-400' },
+};
+
+// ── FLASHCARD COMPONENT ─────────────────────────────────────────────────────
 function Flashcard({ question, answer, index }) {
   const [flipped, setFlipped] = useState(false);
 
-  const pastelGradients = [
-    "from-sky-50 via-blue-50 to-indigo-100 border-indigo-200 text-indigo-950",
-    "from-emerald-50 via-teal-50 to-cyan-100 border-teal-200 text-teal-950",
-    "from-amber-50 via-orange-50 to-yellow-100 border-amber-200 text-amber-950",
-    "from-purple-50 via-fuchsia-50 to-violet-100 border-violet-200 text-violet-950",
-    "from-rose-50 via-pink-50 to-red-100 border-rose-200 text-rose-950",
-    "from-lime-50 via-green-50 to-emerald-100 border-green-200 text-green-950",
+  const answerPastels = [
+    'bg-sky-50 border-sky-200 text-sky-950',
+    'bg-emerald-50 border-emerald-200 text-emerald-950',
+    'bg-amber-50 border-amber-200 text-amber-950',
+    'bg-purple-50 border-purple-200 text-purple-950',
+    'bg-rose-50 border-rose-200 text-rose-950',
+    'bg-teal-50 border-teal-200 text-teal-950',
   ];
-  const colorClass = pastelGradients[index % pastelGradients.length];
+  const answerColor = answerPastels[index % answerPastels.length];
 
   return (
     <div
-      className="h-56 cursor-pointer [perspective:1000px] group print:break-inside-avoid print:h-auto print:mb-4"
+      className="h-60 cursor-pointer [perspective:1000px] group"
       onClick={() => setFlipped(!flipped)}
     >
       <div
         className={`relative w-full h-full transition-transform duration-500 ease-in-out [transform-style:preserve-3d] ${
           flipped ? '[transform:rotateY(180deg)]' : '[transform:rotateY(0deg)]'
-        } print:[transform:none]`}
+        }`}
       >
-        <div className="absolute inset-0 w-full h-full bg-white border border-slate-200 p-6 rounded-3xl [backface-visibility:hidden] flex flex-col justify-between shadow-sm hover:border-slate-300 transition-colors print:relative print:backface-visible print:shadow-none print:rounded-xl print:border-slate-300 print:mb-2">
+        {/* FRONT — Question */}
+        <div className="absolute inset-0 w-full h-full bg-white border-2 border-slate-200 p-6 rounded-2xl [backface-visibility:hidden] flex flex-col justify-between shadow-sm hover:border-slate-300 hover:shadow-md transition-all">
           <div>
-            <span className="text-xs text-slate-500 font-extrabold uppercase tracking-widest">QUESTION BLOCK</span>
-            <p className="mt-3 text-base font-extrabold text-slate-800 leading-snug print:text-sm">{question}</p>
+            <span className="inline-block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 bg-slate-100 px-3 py-1 rounded-full mb-3">
+              QUESTION
+            </span>
+            <p className="text-[15px] font-black text-slate-900 leading-snug">{question}</p>
           </div>
-          <span className="text-xs text-slate-400 font-semibold text-right transition-colors print:hidden">Tap Card to Flip 🔄</span>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">#{String(index + 1).padStart(2, '0')}</span>
+            <span className="text-[10px] font-semibold text-slate-400 flex items-center gap-1">
+              <span className="w-3 h-3 border-2 border-slate-300 rounded-full inline-block" />
+              Tap to reveal
+            </span>
+          </div>
         </div>
 
-        <div
-          className={`absolute inset-0 w-full h-full bg-gradient-to-br ${colorClass} border p-6 rounded-3xl [backface-visibility:hidden] [transform:rotateY(180deg)] flex flex-col justify-between shadow-sm print:relative print:backface-visible print:[transform:none] print:bg-none print:text-slate-800 print:p-4 print:pt-0 print:shadow-none print:border-b print:border-slate-200 print:rounded-none`}
-        >
+        {/* BACK — Answer */}
+        <div className={`absolute inset-0 w-full h-full border-2 ${answerColor} p-6 rounded-2xl [backface-visibility:hidden] [transform:rotateY(180deg)] flex flex-col justify-between shadow-sm`}>
           <div>
-            <span className="text-xs font-black uppercase tracking-widest opacity-70 print:text-slate-500">ANSWER</span>
-            <p className="mt-3 text-base font-black leading-relaxed overflow-y-auto max-h-32 no-scrollbar print:max-h-none print:text-sm print:mt-1">
+            <span className="inline-block text-[10px] font-black uppercase tracking-[0.2em] opacity-60 bg-black/5 px-3 py-1 rounded-full mb-3">
+              ANSWER
+            </span>
+            <p className="text-[15px] font-black leading-relaxed overflow-y-auto max-h-36 no-scrollbar">
               {answer}
             </p>
           </div>
-          <span className="text-xs opacity-60 font-semibold text-right print:hidden">Tap Card to Return 🔄</span>
+          <span className="text-[10px] font-semibold opacity-50 text-right">Tap to return</span>
         </div>
       </div>
     </div>
   );
 }
 
+// ── MAIN DASHBOARD ──────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
@@ -64,11 +85,11 @@ export default function Dashboard() {
   const [loadingStage, setLoadingStage] = useState(0);
   const [data, setData] = useState(null);
   const [activeTab, setActiveTab] = useState('summary');
-  const [copiedText, setCopiedText] = useState(false);
-  const [fullscreenMode, setFullscreenMode] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [navCollapsed, setNavCollapsed] = useState(false);
   const [historyList, setHistoryList] = useState([]);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const [dynamicTab3Title, setDynamicTab3Title] = useState('Timeline & Chronology');
   const [dynamicTab3Sub, setDynamicTab3Sub] = useState('Date historical structures');
@@ -95,58 +116,32 @@ export default function Dashboard() {
   useEffect(() => {
     const localHistory = localStorage.getItem('pagiverse_tabbed_private_history');
     if (localHistory) {
-      try {
-        setHistoryList(JSON.parse(localHistory));
-      } catch (_) {
-        setHistoryList([]);
-      }
+      try { setHistoryList(JSON.parse(localHistory)); }
+      catch (_) { setHistoryList([]); }
     }
   }, []);
 
   useEffect(() => {
     if (!data) return;
-
     const joinedContent = [
       data.summary || '',
       Array.isArray(data.key_points) ? data.key_points.join(' ') : '',
       Array.isArray(data.cheat_sheet) ? data.cheat_sheet.join(' ') : '',
-    ]
-      .join(' ')
-      .toLowerCase();
+    ].join(' ').toLowerCase();
 
-    if (
-      joinedContent.includes('algorithm') ||
-      joinedContent.includes('complexity') ||
-      joinedContent.includes('sorting') ||
-      joinedContent.includes('big-o') ||
-      joinedContent.includes('daa') ||
-      joinedContent.includes('tree')
-    ) {
+    if (joinedContent.includes('algorithm') || joinedContent.includes('complexity') || joinedContent.includes('sorting') || joinedContent.includes('big-o') || joinedContent.includes('daa') || joinedContent.includes('tree')) {
       setDynamicTab3Title('Model & Algorithm Evolution');
       setDynamicTab3Sub('Algorithmic execution sequences');
       setDynamicTab4Title('Complexity Rules & Logic');
       setDynamicTab4Sub('Time/space complexity metrics');
       setDynamicSummaryHighlight('Data Science & Algorithmic Paradigm Isolated');
-    } else if (
-      joinedContent.includes('theorem') ||
-      joinedContent.includes('proof') ||
-      joinedContent.includes('induction') ||
-      joinedContent.includes('discrete') ||
-      joinedContent.includes('math')
-    ) {
+    } else if (joinedContent.includes('theorem') || joinedContent.includes('proof') || joinedContent.includes('induction') || joinedContent.includes('discrete') || joinedContent.includes('math')) {
       setDynamicTab3Title('Sequential Steps & Proofs');
       setDynamicTab3Sub('Logical structure proofs sequences');
       setDynamicTab4Title('Axioms, Theorems & Corollaries');
       setDynamicTab4Sub('Core properties structural formulas');
       setDynamicSummaryHighlight('Mathematical Discrete Analytical Concept Isolated');
-    } else if (
-      joinedContent.includes('kernel') ||
-      joinedContent.includes('scheduling') ||
-      joinedContent.includes('operating') ||
-      joinedContent.includes('protocol') ||
-      joinedContent.includes('memory') ||
-      joinedContent.includes('process')
-    ) {
+    } else if (joinedContent.includes('kernel') || joinedContent.includes('scheduling') || joinedContent.includes('operating') || joinedContent.includes('protocol') || joinedContent.includes('memory') || joinedContent.includes('process')) {
       setDynamicTab3Title('System State Chronology');
       setDynamicTab3Sub('CPU process scheduling timelines');
       setDynamicTab4Title('Standards, Protocols & Limits');
@@ -195,14 +190,11 @@ export default function Dashboard() {
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file) return;
-
     const formData = new FormData();
     formData.append('file', file);
-
     setLoading(true);
     setUploadProgress(15);
     setData(null);
-
     try {
       const response = await fetch(`${API_BASE_URL}/upload`, { method: 'POST', body: formData });
       const result = await response.json();
@@ -229,7 +221,6 @@ export default function Dashboard() {
         await new Promise((r) => setTimeout(r, 3000));
         const res = await fetch(`${API_BASE_URL}/document/${docId}`);
         const statusCheck = await res.json();
-
         if (statusCheck.status === 'completed') {
           const dataRes = await fetch(`${API_BASE_URL}/document/${docId}/analytics`);
           const result = await dataRes.json();
@@ -243,7 +234,6 @@ export default function Dashboard() {
               flashcards: Array.isArray(result.flashcards) ? result.flashcards : [],
             };
             setData(parsedData);
-
             const newHistoryItem = { id: docId, filename: fileName, analytics: parsedData };
             setHistoryList((prev) => {
               const updated = [newHistoryItem, ...prev.filter((item) => item.id !== docId)];
@@ -288,7 +278,6 @@ export default function Dashboard() {
     });
   };
 
-  // FIXED ALERT CONFIGURATION: Changed prompt string to clean academic English layout text
   const clearAllHistory = () => {
     if (window.confirm('Are you sure you want to permanently clear all local private analysis history?')) {
       setHistoryList([]);
@@ -297,66 +286,201 @@ export default function Dashboard() {
     }
   };
 
-  const copyTabContent = () => {
-    let textToCopy = '';
-    if (activeTab === 'summary') textToCopy = data.summary || '';
-    else if (activeTab === 'key_points') textToCopy = data.key_points?.join('\n') || '';
-    else if (activeTab === 'timeline') textToCopy = data.timeline_dates?.join('\n') || '';
-    else if (activeTab === 'quotes') textToCopy = data.historians_quotes?.join('\n') || '';
-    else if (activeTab === 'cheat_sheet') textToCopy = data.cheat_sheet?.join('\n') || '';
+  // ── DOWNLOAD PDF REPORT — fetches ALL 6 tab domains into one printable report ──
+  const handleDownloadPdfReport = () => {
+    if (!data) return;
+    setDownloadingPdf(true);
 
-    navigator.clipboard.writeText(textToCopy).then(() => {
-      setCopiedText(true);
-      setTimeout(() => setCopiedText(false), 2000);
-    });
+    const cheatArr = data.cheat_sheet?.length > 0 ? data.cheat_sheet : data.key_points?.slice(0, 10) || [];
+
+    const summaryBlocks = buildSummaryMap(data.summary);
+
+    const sectionStyle = (bg, accent) =>
+      `background:${bg};border-left:4px solid ${accent};border-radius:12px;padding:20px 24px;margin-bottom:12px;`;
+
+    const escHtml = (str) => String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    const summaryHtml = Object.keys(summaryBlocks).map((header, i) => `
+      <div style="margin-bottom:28px;">
+        <div style="display:inline-block;background:#d1fae5;border:1px solid #6ee7b7;color:#065f46;font-size:10px;font-weight:900;letter-spacing:0.15em;text-transform:uppercase;padding:6px 14px;border-radius:20px;margin-bottom:10px;">✨ ${escHtml(header)}</div>
+        <div style="${sectionStyle('#f0fdf4','#10b981')}">
+          <p style="color:#0f172a;font-size:14px;font-weight:700;line-height:1.75;white-space:pre-line;margin:0;">${escHtml(summaryBlocks[header].join('\n\n'))}</p>
+        </div>
+      </div>
+    `).join('');
+
+    const keyPointsHtml = data.key_points.map((item, idx) => `
+      <div style="${sectionStyle('#f0f9ff','#38bdf8')}display:flex;gap:14px;align-items:flex-start;">
+        <span style="color:#38bdf8;font-weight:900;font-size:12px;margin-top:2px;min-width:24px;">${String(idx+1).padStart(2,'0')}.</span>
+        <p style="color:#0f172a;font-size:14px;font-weight:700;line-height:1.7;margin:0;">${escHtml(item)}</p>
+      </div>
+    `).join('');
+
+    const timelineHtml = `<div style="border-left:3px solid #fbbf24;padding-left:20px;margin-left:10px;">` +
+      data.timeline_dates.map(event => `
+        <div style="${sectionStyle('#fffbeb','#f59e0b')}position:relative;">
+          <div style="position:absolute;left:-30px;top:16px;width:10px;height:10px;border-radius:50%;background:#fbbf24;border:2px solid #fff;"></div>
+          <p style="color:#451a03;font-size:14px;font-weight:700;margin:0;">${escHtml(event)}</p>
+        </div>
+      `).join('') + `</div>`;
+
+    const quotesHtml = data.historians_quotes.map(q => `
+      <div style="${sectionStyle('#eef2ff','#6366f1')}position:relative;">
+        <span style="position:absolute;right:16px;top:4px;font-size:40px;font-family:Georgia,serif;color:#c7d2fe;line-height:1;">"</span>
+        <p style="color:#1e1b4b;font-size:14px;font-weight:700;line-height:1.7;padding-right:30px;margin:0;">${escHtml(q)}</p>
+      </div>
+    `).join('');
+
+    const cheatHtml = cheatArr.map(point => `
+      <div style="${sectionStyle('#fff1f2','#f43f5e')}display:flex;gap:12px;align-items:flex-start;">
+        <span style="width:8px;height:8px;border-radius:50%;background:#f43f5e;flex-shrink:0;margin-top:5px;"></span>
+        <p style="color:#0f172a;font-size:14px;font-weight:700;line-height:1.7;margin:0;">${escHtml(point)}</p>
+      </div>
+    `).join('');
+
+    const flashcardsHtml = data.flashcards.map((card, idx) => `
+      <div style="display:flex;gap:12px;margin-bottom:16px;page-break-inside:avoid;">
+        <div style="flex:1;background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:16px;">
+          <span style="font-size:9px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:0.15em;display:block;margin-bottom:8px;">Q${String(idx+1).padStart(2,'0')}</span>
+          <p style="font-size:13px;font-weight:800;color:#0f172a;line-height:1.5;margin:0;">${escHtml(card.question)}</p>
+        </div>
+        <div style="flex:1;background:#f5f3ff;border:2px solid #ddd6fe;border-radius:12px;padding:16px;">
+          <span style="font-size:9px;font-weight:900;color:#7c3aed;text-transform:uppercase;letter-spacing:0.15em;display:block;margin-bottom:8px;">ANSWER</span>
+          <p style="font-size:13px;font-weight:800;color:#1e1b4b;line-height:1.5;margin:0;">${escHtml(card.answer)}</p>
+        </div>
+      </div>
+    `).join('');
+
+    const sectionHeader = (icon, title, color) =>
+      `<div style="display:flex;align-items:center;gap:10px;border-bottom:2px solid ${color};padding-bottom:10px;margin-bottom:20px;page-break-after:avoid;">
+        <span style="font-size:18px;">${icon}</span>
+        <h2 style="font-size:20px;font-weight:900;color:#0f172a;margin:0;letter-spacing:-0.02em;">${escHtml(title)}</h2>
+      </div>`;
+
+    const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Pagiverse — Full Analysis Report</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: #fff; color: #0f172a; padding: 48px; }
+    .report-header { margin-bottom: 40px; padding-bottom: 24px; border-bottom: 3px solid #10b981; }
+    .section { margin-bottom: 48px; page-break-inside: avoid; }
+    @media print {
+      body { padding: 20px; }
+      .section { page-break-before: always; }
+      .section:first-of-type { page-break-before: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="report-header">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px;">
+      <div style="background:linear-gradient(135deg,#10b981,#0d9488);width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+        <span style="color:#fff;font-size:20px;">✦</span>
+      </div>
+      <div>
+        <h1 style="font-size:28px;font-weight:900;color:#0f172a;letter-spacing:-0.04em;">Pagiverse</h1>
+        <p style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.15em;">Full Analysis Report — All 6 Domain Views</p>
+      </div>
+    </div>
+    <p style="font-size:12px;color:#94a3b8;font-weight:600;">Generated: ${new Date().toLocaleString()}</p>
+  </div>
+
+  <div class="section">
+    ${sectionHeader('📄', 'Page Summaries — ' + escHtml(dynamicSummaryHighlight), '#10b981')}
+    ${summaryHtml}
+  </div>
+
+  <div class="section">
+    ${sectionHeader('📘', 'Deep Insights Matrix', '#38bdf8')}
+    ${keyPointsHtml}
+  </div>
+
+  <div class="section">
+    ${sectionHeader('📅', escHtml(dynamicTab3Title), '#fbbf24')}
+    ${timelineHtml}
+  </div>
+
+  <div class="section">
+    ${sectionHeader('💬', escHtml(dynamicTab4Title), '#6366f1')}
+    ${quotesHtml}
+  </div>
+
+  <div class="section">
+    ${sectionHeader('⚡', 'Exam Cheat-Sheet', '#f43f5e')}
+    ${cheatHtml}
+  </div>
+
+  <div class="section">
+    ${sectionHeader('🃏', 'Active Flashcards', '#7c3aed')}
+    ${flashcardsHtml}
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([fullHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const printWin = window.open(url, '_blank');
+    if (printWin) {
+      printWin.onload = () => {
+        printWin.focus();
+        printWin.print();
+      };
+    }
+    setTimeout(() => { URL.revokeObjectURL(url); setDownloadingPdf(false); }, 3000);
   };
 
-  const printTargetTabOnlyMode = () => {
-    const printArea = document.getElementById('target-tab-print-viewport');
-    if (!printArea) return;
-    const originalContent = document.body.innerHTML;
-    const printContent = printArea.innerHTML;
-    document.body.innerHTML = `<div style="padding:30px;font-family:sans-serif;background:white;color:black;">${printContent}</div>`;
-    window.print();
-    document.body.innerHTML = originalContent;
-    window.location.reload();
-  };
-
-  // FIXED PAGE SUMMARY HEADERS LOGIC: Cleans and maps segments into explicit uppercase markers (e.g., PAGE NUMBER: 1)
-  const renderSummaryBlocks = () => {
-    if (!data?.summary) return <div className="text-xs font-bold text-slate-400 py-8 text-center">No summary datasets unallocated.</div>;
-
-    const rawLines = data.summary.split('\n');
+  // ── SUMMARY BLOCK BUILDER ──
+  const buildSummaryMap = (summaryText) => {
+    if (!summaryText) return {};
+    const rawLines = summaryText.split('\n');
     const pageMap = {};
-    let currentKey = "GENERAL OVERVIEW";
+    let currentKey = 'GENERAL OVERVIEW';
     let pageCount = 1;
-
     rawLines.forEach((line) => {
       const trimmed = line.trim();
       if (!trimmed) return;
-
-      const lowerLine = trimmed.toLowerCase();
-      if (lowerLine.startsWith('page') || lowerLine.startsWith('### page') || lowerLine.startsWith('## page')) {
-        // Safe regex to pull digits out of structural heading string lines
+      const lower = trimmed.toLowerCase();
+      if (lower.startsWith('page') || lower.startsWith('### page') || lower.startsWith('## page')) {
         const match = trimmed.match(/\d+/);
-        const pageNum = match ? match[0] : pageCount++;
-        currentKey = `PAGE NUMBER: ${pageNum}`;
+        const pageNum = match ? String(match[0]).padStart(2, '0') : String(pageCount++).padStart(2, '0');
+        currentKey = `PAGE ${pageNum} INSIGHTS`;
         if (!pageMap[currentKey]) pageMap[currentKey] = [];
       } else {
         if (!pageMap[currentKey]) pageMap[currentKey] = [];
         pageMap[currentKey].push(trimmed);
       }
     });
+    return pageMap;
+  };
+
+  const renderSummaryBlocks = () => {
+    if (!data?.summary)
+      return <div className="text-xs font-bold text-slate-400 py-10 text-center tracking-wide">No summary datasets unallocated.</div>;
+
+    const pageMap = buildSummaryMap(data.summary);
+
+    const badgeColors = [
+      'bg-emerald-100 border-emerald-300 text-emerald-800',
+      'bg-teal-100 border-teal-300 text-teal-800',
+      'bg-cyan-100 border-cyan-300 text-cyan-800',
+      'bg-sky-100 border-sky-300 text-sky-800',
+      'bg-indigo-100 border-indigo-300 text-indigo-800',
+      'bg-violet-100 border-violet-300 text-violet-800',
+    ];
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-7">
         {Object.keys(pageMap).map((header, index) => (
           <div key={index} className="space-y-3">
-            <h3 className="text-xs font-black text-emerald-800 bg-emerald-100/80 border border-emerald-200 px-4 py-2 rounded-xl max-w-max tracking-widest uppercase">
-              ✨ {header}
-            </h3>
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100/80 border-l-4 border-l-emerald-500">
-              <p className="text-slate-950 font-black text-base md:text-lg leading-relaxed whitespace-pre-line tracking-wide">
+            <span className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] px-4 py-2 rounded-xl border ${badgeColors[index % badgeColors.length]}`}>
+              <span className="opacity-70">✦</span> {header}
+            </span>
+            <div className="bg-emerald-50 border border-emerald-200 border-l-4 border-l-emerald-500 rounded-2xl p-6 shadow-sm">
+              <p className="text-slate-950 font-semibold text-[15px] leading-relaxed whitespace-pre-line tracking-wide">
                 {pageMap[header].join('\n\n')}
               </p>
             </div>
@@ -366,91 +490,172 @@ export default function Dashboard() {
     );
   };
 
-  const cheatSheetArray = data?.cheat_sheet && data.cheat_sheet.length > 0
-    ? data.cheat_sheet
-    : data?.key_points?.slice(0, 10) || [];
+  const cheatSheetArray = data?.cheat_sheet?.length > 0 ? data.cheat_sheet : data?.key_points?.slice(0, 10) || [];
+
+  // ── TAB DEFINITIONS ──
+  const tabs = [
+    { key: 'summary',    icon: FileText,    label: 'Page Summaries',       sub: 'Granular index bounds',         pal: TAB_PALETTE.summary },
+    { key: 'key_points', icon: BookOpen,    label: 'Deep Insights Matrix', sub: 'Micro factual metrics',         pal: TAB_PALETTE.key_points },
+    { key: 'timeline',   icon: Calendar,    label: dynamicTab3Title,       sub: dynamicTab3Sub,                  pal: TAB_PALETTE.timeline },
+    { key: 'quotes',     icon: Layers,      label: dynamicTab4Title,       sub: dynamicTab4Sub,                  pal: TAB_PALETTE.quotes },
+    { key: 'cheat_sheet',icon: Sparkles,    label: 'Exam Cheat-Sheet',     sub: 'Formula blocks compiler',       pal: TAB_PALETTE.cheat_sheet },
+    { key: 'flashcards', icon: HelpCircle,  label: 'Active Flashcards',    sub: 'Interactive testing matrix',    pal: TAB_PALETTE.flashcards },
+  ];
 
   return (
-    <div className={`min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-emerald-200 p-4 md:p-6 ${fullscreenMode ? 'fixed inset-0 z-50 overflow-y-auto bg-white p-0 md:p-0' : ''}`}>
-      
-      {/* ── CLEAN PREMIUM NAVBAR BANNER (REMOVED PRINT ALL REPORT BUTTON) ── */}
-      <header className="no-print flex justify-between items-center bg-white border border-slate-200 rounded-3xl p-5 mb-8 shadow-sm">
-        <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-slate-50 text-slate-800 selection:bg-emerald-200 p-4 md:p-6" style={{ fontFamily: "'DM Sans', 'Outfit', system-ui, sans-serif" }}>
+
+      {/* ── NAVBAR ── */}
+      <header className="flex justify-between items-center bg-white border border-slate-200 rounded-2xl px-5 py-4 mb-6 shadow-sm">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2.5 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-emerald-600 transition-colors"
+            className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-emerald-600 transition-colors"
           >
-            {sidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
+            {sidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
           </button>
-          <div className="bg-gradient-to-tr from-emerald-400 to-teal-500 p-3 rounded-2xl shadow-md text-white">
-            <Sparkles size={22} />
+          <div className="w-9 h-9 bg-gradient-to-tr from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-md text-white">
+            <Sparkles size={18} />
           </div>
-          <div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">Pagiverse</h1>
-          </div>
+          <h1 className="text-[18px] font-black text-slate-900 tracking-tight">Pagiverse</h1>
         </div>
+        {data && (
+          <button
+            onClick={handleDownloadPdfReport}
+            disabled={downloadingPdf}
+            className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-black px-5 py-2.5 rounded-xl shadow-md hover:shadow-emerald-400/30 hover:from-emerald-600 hover:to-teal-600 transition-all disabled:opacity-60"
+          >
+            <Download size={14} />
+            {downloadingPdf ? 'Compiling...' : 'Download PDF Report'}
+          </button>
+        )}
       </header>
 
-      {/* Main Core Viewport Wrapper Grid */}
-      <div className={`max-w-[1600px] mx-auto grid gap-8 ${sidebarOpen ? 'grid-cols-1 lg:grid-cols-4' : 'grid-cols-1'}`}>
-        
-        {/* Persistent Side Controller Panel */}
+      {/* ── MAIN GRID ── */}
+      <div className={`max-w-[1640px] mx-auto grid gap-6 transition-all ${sidebarOpen ? 'grid-cols-1 lg:grid-cols-[300px_1fr]' : 'grid-cols-1'}`}>
+
+        {/* ── LEFT SIDEBAR ── */}
         {sidebarOpen && (
-          <div className="no-print flex flex-col gap-6 lg:col-span-1">
-            
-            {/* Upload Section - PERSISTENT ACTIVE NODE */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-              <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <Upload size={16} className="text-emerald-500" /> Feed Core Document PDF
+          <div className="flex flex-col gap-5">
+
+            {/* UPLOAD ZONE */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+              <h3 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
+                <Upload size={13} className="text-emerald-500" /> Feed Core Document PDF
               </h3>
               <div
-                className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[160px] ${
-                  dragActive ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-300 bg-slate-50/50 hover:border-emerald-400'
+                className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[148px] ${
+                  dragActive ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-slate-50/60 hover:border-emerald-400 hover:bg-emerald-50/40'
                 }`}
                 onDragEnter={handleDrag} onDragOver={handleDrag} onDragLeave={handleDrag} onDrop={handleDrop}
                 onClick={() => fileInputRef.current.click()}
               >
                 <input ref={fileInputRef} type="file" className="hidden" accept=".pdf" onChange={handleFileChange} />
                 {file ? (
-                  <div className="space-y-2 truncate max-w-full">
-                    <FileText size={32} className="text-emerald-500 mx-auto" />
-                    <p className="text-sm font-bold text-slate-800 truncate">{file.name}</p>
-                    <p className="text-xs font-semibold text-slate-400">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+                  <div className="space-y-2 w-full">
+                    <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center mx-auto">
+                      <FileText size={20} className="text-emerald-600" />
+                    </div>
+                    <p className="text-xs font-black text-slate-800 truncate px-2">{file.name}</p>
+                    <p className="text-[10px] font-semibold text-slate-400">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <Upload size={28} className="text-slate-400 mx-auto" />
-                    <p className="text-xs font-bold text-slate-600">Drag & drop or Click to choose PDF</p>
+                    <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center mx-auto">
+                      <Upload size={18} className="text-slate-400" />
+                    </div>
+                    <p className="text-[11px] font-bold text-slate-500 leading-snug">Drag & drop or click<br/>to choose PDF</p>
                   </div>
                 )}
               </div>
               {file && !loading && (
-                <button onClick={handleUpload} className="w-full mt-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-3 rounded-xl shadow-md hover:shadow-emerald-500/20 flex items-center justify-center gap-2 text-sm transition-all active:scale-98">
-                  Initialize Deep AI Processing <ArrowRight size={15} />
+                <button
+                  onClick={handleUpload}
+                  className="w-full mt-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black py-2.5 rounded-xl shadow hover:shadow-emerald-400/30 flex items-center justify-center gap-2 text-xs transition-all hover:from-emerald-600 hover:to-teal-600 active:scale-[0.98]"
+                >
+                  Initialize Deep AI Processing <ArrowRight size={13} />
                 </button>
               )}
             </div>
 
-            {/* Archive Database Repository Snapshots Component */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
+            {/* COLLAPSIBLE NAV LIST SLIDER */}
+            {data && (
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <button
+                  onClick={() => setNavCollapsed(!navCollapsed)}
+                  className="w-full flex items-center justify-between px-5 py-3.5 text-[11px] font-black text-slate-500 uppercase tracking-[0.15em] hover:bg-slate-50 transition-colors"
+                >
+                  <span>Navigation Views</span>
+                  {navCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                </button>
+                {!navCollapsed && (
+                  <div className="px-3 pb-3 space-y-1.5 border-t border-slate-100">
+                    {tabs.map(({ key, icon: Icon, label, sub, pal }) => {
+                      const isActive = activeTab === key;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => setActiveTab(key)}
+                          className={`w-full text-left px-3.5 py-3 rounded-xl border transition-all flex items-center justify-between group ${
+                            isActive
+                              ? `${pal.bg} ${pal.border} shadow-sm`
+                              : 'bg-slate-50/50 border-transparent hover:bg-slate-50 hover:border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <Icon size={14} className={isActive ? pal.label : 'text-slate-400'} />
+                            <div className="truncate">
+                              <p className={`text-[11px] font-black tracking-tight truncate ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>{label}</p>
+                              <p className={`text-[9px] font-semibold truncate ${isActive ? 'text-slate-500' : 'text-slate-400'}`}>{sub}</p>
+                            </div>
+                          </div>
+                          {key === 'flashcards' ? (
+                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 ${pal.badge}`}>
+                              {data.flashcards?.length || 0}
+                            </span>
+                          ) : (
+                            <ChevronRight size={11} className={`shrink-0 transition-transform ${isActive ? pal.label : 'text-slate-300'} group-hover:translate-x-0.5`} />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ANALYSIS ARCHIVE REPOSITORY */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
               <div className="flex justify-between items-center mb-3">
-                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                  <History size={13} /> 📚 ANALYSIS ARCHIVE REPOSITORY
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] flex items-center gap-1.5">
+                  <History size={11} /> 📚 ANALYSIS ARCHIVE REPOSITORY
                 </h3>
                 {historyList.length > 0 && (
-                  <button onClick={clearAllHistory} className="text-[11px] text-rose-500 hover:text-rose-700 font-bold flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors">
-                    <Trash2 size={12} /> Clear All
+                  <button
+                    onClick={clearAllHistory}
+                    className="text-[10px] text-rose-500 hover:text-rose-700 font-black flex items-center gap-0.5 px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors"
+                  >
+                    <Trash2 size={11} /> Clear
                   </button>
                 )}
               </div>
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1 no-scrollbar">
+              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-0.5" style={{ scrollbarWidth: 'none' }}>
                 {historyList.length === 0 ? (
-                  <p className="text-xs text-slate-400 font-medium text-center py-4">No analysis archive elements synced.</p>
+                  <p className="text-[11px] text-slate-400 font-medium text-center py-5">No archive elements synced.</p>
                 ) : (
                   historyList.map((item) => (
-                    <div key={item.id} onClick={() => loadHistoryItem(item)} className="group flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/60 transition-colors cursor-pointer">
-                      <span className="text-xs font-bold text-slate-600 truncate max-w-[80%]">📄 {item.filename}</span>
-                      <button onClick={(e) => deleteHistoryItem(item.id, e)} className="p-1 text-slate-400 hover:text-rose-500 bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all border border-slate-100 shadow-sm"><X size={12} /></button>
+                    <div
+                      key={item.id}
+                      onClick={() => loadHistoryItem(item)}
+                      className="group flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-emerald-300 hover:bg-emerald-50/50 transition-all cursor-pointer"
+                    >
+                      <span className="text-[11px] font-bold text-slate-600 truncate max-w-[80%]">📄 {item.filename}</span>
+                      <button
+                        onClick={(e) => deleteHistoryItem(item.id, e)}
+                        className="p-1 text-slate-300 hover:text-rose-500 bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-all border border-slate-100 shadow-sm"
+                      >
+                        <X size={11} />
+                      </button>
                     </div>
                   ))
                 )}
@@ -459,235 +664,181 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Global Loading Spinner View */}
+        {/* ── LOADING PANEL ── */}
         {loading && (
-          <div className={`${sidebarOpen ? 'lg:col-span-3' : 'w-full'} bg-white border border-slate-200 rounded-3xl p-8 text-center shadow-sm space-y-6`}>
-            <div className="max-w-md mx-auto space-y-2">
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+          <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm space-y-6">
+            <div className="max-w-sm mx-auto space-y-2">
+              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full transition-all duration-500 ease-out"
+                  style={{ width: `${uploadProgress}%` }}
+                />
               </div>
-              <span className="text-xs font-black text-slate-500">{uploadProgress}% Compiled</span>
+              <span className="text-[11px] font-black text-slate-400 tracking-wider">{uploadProgress}% COMPILED</span>
             </div>
-            <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <div className="w-11 h-11 border-[3px] border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
             <div>
-              <h3 className="text-lg font-bold text-slate-800">Analyzing Document Vector Architecture</h3>
-              <p className="text-xs font-medium text-emerald-600 mt-1">Pipeline Event: {stages[loadingStage]}</p>
+              <h3 className="text-base font-black text-slate-800 tracking-tight">Analyzing Document Vector Architecture</h3>
+              <p className="text-[11px] font-bold text-emerald-600 mt-2 max-w-xs mx-auto leading-relaxed">
+                ◎ {stages[loadingStage]}
+              </p>
             </div>
           </div>
         )}
 
-        {/* Core Return Dashboard Panel Viewport */}
+        {/* ── RESULTS PANEL ── */}
         {data && !loading && (
-          <div ref={resultsRef} className={`${sidebarOpen ? 'lg:col-span-3' : 'w-full'} bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm print:border-none print:shadow-none`}>
-            
-            <div className="no-print bg-slate-50/80 backdrop-blur-md p-4 border-b border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-40">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="text-emerald-500 w-5 h-5" />
-                <div>
-                  <h4 className="text-xs font-black text-slate-800">Analysis Engine Scope Succeeded</h4>
-                  <p className="text-[10px] font-semibold text-slate-400">Target Core Node Matrix Isolation Running</p>
-                </div>
+          <div ref={resultsRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+
+            {/* PANEL TOP STATUS BAR */}
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-3 flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-black text-slate-700 tracking-tight">Analysis Engine — Scope Succeeded</p>
+                <p className="text-[10px] font-semibold text-slate-400">Target Core Node Matrix Active</p>
               </div>
-              
-              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
-                <button onClick={copyTabContent} className="bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all text-slate-700">
-                  {copiedText ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                  <span>{copiedText ? 'Copied!' : 'Copy Stream'}</span>
-                </button>
-                <button onClick={printTargetTabOnlyMode} className="bg-emerald-600 border border-emerald-700 hover:bg-emerald-700 px-4 py-1.5 text-xs font-black rounded-xl flex items-center gap-1.5 shadow-sm transition-all text-white">
-                  <Printer size={14} />
-                  <span>Print Current Tab</span>
-                </button>
-                <button onClick={() => setFullscreenMode(!fullscreenMode)} className="bg-white border border-slate-300 hover:bg-slate-50 p-2 text-xs font-bold rounded-xl shadow-sm transition-all text-slate-700">
-                  {fullscreenMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-                </button>
-              </div>
+              <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 min-h-[600px] print:block">
-              
-              {/* Tab Selector Nav Sidebar with Soft Highlight Gradients */}
-              <aside className="no-print bg-slate-50/40 border-r border-slate-200 p-3 space-y-2.5 md:col-span-1 max-h-[700px] overflow-y-auto no-scrollbar print:hidden">
-                
-                <button
-                  onClick={() => setActiveTab('summary')}
-                  className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
-                    activeTab === 'summary' ? 'bg-emerald-100/80 border-emerald-400 text-emerald-950 font-black shadow-md' : 'bg-emerald-50/30 border-emerald-100/50 text-slate-600 hover:bg-emerald-50/70'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <FileText size={16} className="text-emerald-600 shrink-0" />
-                    <div className="truncate">
-                      <p className="text-xs font-black tracking-tight">Page Summaries</p>
-                      <p className="text-[10px] font-bold opacity-75 truncate">Granular index bounds</p>
-                    </div>
-                  </div>
-                  <ChevronRight size={12} className="opacity-50 shrink-0" />
-                </button>
+            {/* CONTENT GRID: Tab Sidebar + Main Viewport */}
+            <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] min-h-[620px]">
 
-                <button
-                  onClick={() => setActiveTab('key_points')}
-                  className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
-                    activeTab === 'key_points' ? 'bg-sky-100/80 border-sky-400 text-sky-950 font-black shadow-md' : 'bg-sky-50/30 border-sky-100/50 text-slate-600 hover:bg-sky-50/70'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <BookOpen size={16} className="text-sky-600 shrink-0" />
-                    <div className="truncate">
-                      <p className="text-xs font-black tracking-tight">Deep Insights Matrix</p>
-                      <p className="text-[10px] font-bold opacity-75 truncate">Micro factual metrics</p>
-                    </div>
-                  </div>
-                  <ChevronRight size={12} className="opacity-50 shrink-0" />
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('timeline')}
-                  className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
-                    activeTab === 'timeline' ? 'bg-amber-100/80 border-amber-400 text-amber-950 font-black shadow-md' : 'bg-amber-50/30 border-amber-100/50 text-slate-600 hover:bg-amber-50/70'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Calendar size={16} className="text-amber-600 shrink-0" />
-                    <div className="truncate">
-                      <p className="text-xs font-black tracking-tight">{dynamicTab3Title}</p>
-                      <p className="text-[10px] font-bold opacity-75 truncate">{dynamicTab3Sub}</p>
-                    </div>
-                  </div>
-                  <ChevronRight size={12} className="opacity-50 shrink-0" />
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('quotes')}
-                  className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
-                    activeTab === 'quotes' ? 'bg-indigo-100/80 border-indigo-400 text-indigo-950 font-black shadow-md' : 'bg-indigo-50/30 border-indigo-100/50 text-slate-600 hover:bg-indigo-50/70'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Layers size={16} className="text-indigo-600 shrink-0" />
-                    <div className="truncate">
-                      <p className="text-xs font-black tracking-tight">{dynamicTab4Title}</p>
-                      <p className="text-[10px] font-bold opacity-75 truncate">{dynamicTab4Sub}</p>
-                    </div>
-                  </div>
-                  <ChevronRight size={12} className="opacity-50 shrink-0" />
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('cheat_sheet')}
-                  className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
-                    activeTab === 'cheat_sheet' ? 'bg-rose-100/80 border-rose-400 text-rose-950 font-black shadow-md' : 'bg-rose-50/30 border-rose-100/50 text-slate-600 hover:bg-rose-50/70'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Sparkles size={16} className="text-rose-600 shrink-0" />
-                    <div className="truncate">
-                      <p className="text-xs font-black tracking-tight">Exam Cheat-Sheet</p>
-                      <p className="text-[10px] font-bold opacity-75 truncate">Formula blocks compiler</p>
-                    </div>
-                  </div>
-                  <ChevronRight size={12} className="opacity-50 shrink-0" />
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('flashcards')}
-                  className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
-                    activeTab === 'flashcards' ? 'bg-purple-100/80 border-purple-400 text-purple-950 font-black shadow-md' : 'bg-purple-50/30 border-purple-100/50 text-slate-600 hover:bg-purple-50/70'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <HelpCircle size={16} className="text-purple-600 shrink-0" />
-                    <div className="truncate">
-                      <p className="text-xs font-black tracking-tight">Active Flashcards</p>
-                      <p className="text-[10px] font-bold opacity-75 truncate">Interactive testing matrix</p>
-                    </div>
-                  </div>
-                  <div className="text-[10px] font-black px-2.5 py-0.5 rounded-full shrink-0 bg-purple-200 text-purple-900">
-                    {data.flashcards?.length || 0}
-                  </div>
-                </button>
+              {/* INNER TAB SIDEBAR */}
+              <aside className="bg-slate-50/60 border-r border-slate-100 p-3 space-y-1.5 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+                {tabs.map(({ key, icon: Icon, label, sub, pal }) => {
+                  const isActive = activeTab === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setActiveTab(key)}
+                      className={`w-full text-left px-3.5 py-3 rounded-xl border transition-all flex items-center justify-between group ${
+                        isActive
+                          ? `${pal.bg} ${pal.border} shadow-sm`
+                          : 'bg-white/60 border-transparent hover:bg-white hover:border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Icon size={14} className={isActive ? pal.label : 'text-slate-400'} />
+                        <div className="truncate">
+                          <p className={`text-[11px] font-black tracking-tight truncate leading-tight ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>{label}</p>
+                          <p className={`text-[9px] font-semibold truncate leading-tight mt-0.5 ${isActive ? 'text-slate-400' : 'text-slate-300'}`}>{sub}</p>
+                        </div>
+                      </div>
+                      {key === 'flashcards' ? (
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 ml-1 ${pal.badge}`}>
+                          {data.flashcards?.length || 0}
+                        </span>
+                      ) : (
+                        <ChevronRight size={11} className={`shrink-0 transition-transform ${isActive ? pal.label : 'text-slate-200'} group-hover:translate-x-0.5`} />
+                      )}
+                    </button>
+                  );
+                })}
               </aside>
 
-              {/* Data Viewport Interface Display Layout */}
-              <main id="target-tab-print-viewport" className="md:col-span-3 p-6 md:p-8 bg-white print:p-0">
+              {/* MAIN CONTENT VIEWPORT */}
+              <main className="p-6 md:p-8 bg-white overflow-y-auto">
 
-                {/* PAGE SUMMARIES FRAME SHIFT LAYOUT */}
-                {(activeTab === 'summary' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-4 ${activeTab !== 'summary' ? 'print:block hidden print:break-before-page' : ''}`}>
-                    <div className="text-xs font-black tracking-widest text-emerald-600 uppercase border-b border-slate-100 pb-2 mb-4">
-                      💡 {dynamicSummaryHighlight}
+                {/* ── PAGE SUMMARIES ── */}
+                {activeTab === 'summary' && (
+                  <div className="space-y-5">
+                    <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                      <span className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg">
+                        💡 {dynamicSummaryHighlight}
+                      </span>
                     </div>
                     {renderSummaryBlocks()}
                   </div>
                 )}
 
-                {/* DEEP INSIGHTS PARAMETERS PANEL */}
-                {(activeTab === 'key_points' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-4 ${activeTab !== 'key_points' ? 'print:block hidden print:break-before-page' : ''}`}>
-                    <h2 className="hidden print:flex text-lg font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><BookOpen size={16}/> Deep Insights Matrix</h2>
+                {/* ── DEEP INSIGHTS MATRIX ── */}
+                {activeTab === 'key_points' && (
+                  <div className="space-y-4">
+                    <div className="pb-3 border-b border-slate-100 mb-5">
+                      <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
+                        <BookOpen size={16} className="text-sky-500" /> Deep Insights Matrix
+                      </h2>
+                    </div>
                     <div className="grid grid-cols-1 gap-3">
                       {data.key_points.map((item, idx) => (
-                        <div key={idx} className="flex gap-4 p-4 border border-slate-100 bg-slate-50/50 rounded-2xl border-l-4 border-l-sky-400">
-                          <span className="font-black text-xs text-sky-500 opacity-60 mt-0.5">{String(idx + 1).padStart(2, '0')}.</span>
-                          <p className="text-sm font-bold text-slate-800 leading-relaxed tracking-wide">{item}</p>
+                        <div key={idx} className="flex gap-4 p-4 bg-sky-50 border border-sky-200 border-l-4 border-l-sky-500 rounded-2xl">
+                          <span className="text-[11px] font-black text-sky-400 mt-0.5 shrink-0 w-6 text-right">{String(idx + 1).padStart(2, '0')}.</span>
+                          <p className="text-[14px] font-semibold text-slate-900 leading-relaxed">{item}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* TIMELINE RUNTIME ENGINE METRICS PANEL */}
-                {(activeTab === 'timeline' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-4 ${activeTab !== 'timeline' ? 'print:block hidden print:break-before-page' : ''}`}>
-                    <h2 className="hidden print:flex text-lg font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><Calendar size={16}/> {dynamicTab3Title}</h2>
-                    <div className="space-y-3 border-l-2 border-amber-300 pl-4 ml-2 relative">
+                {/* ── TIMELINE ── */}
+                {activeTab === 'timeline' && (
+                  <div className="space-y-4">
+                    <div className="pb-3 border-b border-slate-100 mb-5">
+                      <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
+                        <Calendar size={16} className="text-amber-500" /> {dynamicTab3Title}
+                      </h2>
+                    </div>
+                    <div className="border-l-2 border-amber-300 pl-5 ml-2 space-y-3 relative">
                       {data.timeline_dates.map((dateEvent, idx) => (
-                        <div key={idx} className="relative p-3.5 rounded-xl border border-slate-100 bg-amber-50/40 text-amber-950 text-sm font-extrabold shadow-sm tracking-wide">
-                          <div className="absolute -left-[23px] top-4 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-white" />
-                          {dateEvent}
+                        <div key={idx} className="relative p-4 bg-amber-50 border border-amber-200 border-l-4 border-l-amber-400 rounded-xl shadow-sm">
+                          <div className="absolute -left-[29px] top-4 w-3 h-3 rounded-full bg-amber-400 border-2 border-white shadow-sm" />
+                          <p className="text-[14px] font-semibold text-amber-950 leading-relaxed">{dateEvent}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* VERBATIM INSTITUTIONAL REGULATORY ACT STRINGS */}
-                {(activeTab === 'quotes' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-4 ${activeTab !== 'quotes' ? 'print:block hidden print:break-before-page' : ''}`}>
-                    <h2 className="hidden print:flex text-lg font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><Layers size={16}/> {dynamicTab4Title}</h2>
+                {/* ── QUOTES / LAWS / ACTS ── */}
+                {activeTab === 'quotes' && (
+                  <div className="space-y-4">
+                    <div className="pb-3 border-b border-slate-100 mb-5">
+                      <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
+                        <Layers size={16} className="text-indigo-500" /> {dynamicTab4Title}
+                      </h2>
+                    </div>
                     <div className="grid grid-cols-1 gap-4">
                       {data.historians_quotes.map((quoteText, idx) => (
-                        <div key={idx} className="p-5 border border-slate-100 bg-indigo-50/40 text-indigo-950 rounded-2xl relative border-l-4 border-l-indigo-400">
-                          <span className="absolute right-4 top-2 text-4xl font-serif text-indigo-200 select-none">"</span>
-                          <p className="text-sm font-extrabold leading-relaxed pr-6 tracking-wide">{quoteText}</p>
+                        <div key={idx} className="relative p-5 bg-indigo-50 border border-indigo-200 border-l-4 border-l-indigo-500 rounded-2xl">
+                          <span className="absolute right-4 top-2 text-5xl font-serif text-indigo-200 select-none leading-none">"</span>
+                          <p className="text-[14px] font-semibold text-indigo-950 leading-relaxed pr-8">{quoteText}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* HIGH WEIGHTAGE COMPILER CHEAT SHEET PANEL */}
-                {(activeTab === 'cheat_sheet' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-4 ${activeTab !== 'cheat_sheet' ? 'print:block hidden print:break-before-page' : ''}`}>
-                    <h2 className="hidden print:flex text-lg font-black text-slate-800 border-b pb-2 mb-4 items-center gap-2"><Sparkles size={16}/> High Weightage Cheat-Sheet</h2>
+                {/* ── CHEAT SHEET ── */}
+                {activeTab === 'cheat_sheet' && (
+                  <div className="space-y-4">
+                    <div className="pb-3 border-b border-slate-100 mb-5">
+                      <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
+                        <Sparkles size={16} className="text-rose-500" /> Exam Cheat-Sheet
+                      </h2>
+                    </div>
                     <div className="grid grid-cols-1 gap-3">
-                      {cheatSheetArray.map((cheatPoint, idx) => (
-                        <div key={idx} className="flex gap-4 p-4 border border-slate-100 bg-emerald-50/30 rounded-2xl border-l-4 border-l-emerald-500">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 shrink-0" />
-                          <p className="text-sm font-extrabold text-slate-800 leading-relaxed tracking-wide">{cheatPoint}</p>
+                      {cheatSheetArray.map((point, idx) => (
+                        <div key={idx} className="flex gap-3 p-4 bg-rose-50 border border-rose-200 border-l-4 border-l-rose-500 rounded-2xl items-start">
+                          <span className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />
+                          <p className="text-[14px] font-semibold text-rose-950 leading-relaxed">{point}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* FLASHCARDS COMPILATION ROWS INTERFACE */}
-                {(activeTab === 'flashcards' || window.matchMedia('print').matches) && (
-                  <div className={`space-y-6 ${activeTab !== 'flashcards' ? 'print:block hidden print:break-before-page' : ''}`}>
-                    <h2 className="text-xl font-extrabold flex items-center gap-2 ml-1 text-slate-800">
-                      <HelpCircle size={20} className="text-purple-500" /> Core Interactive Flashcards
-                    </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 print:grid-cols-2">
+                {/* ── FLASHCARDS ── */}
+                {activeTab === 'flashcards' && (
+                  <div className="space-y-5">
+                    <div className="pb-3 border-b border-slate-100 mb-5 flex items-center justify-between">
+                      <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
+                        <HelpCircle size={16} className="text-purple-500" /> Active Flashcards
+                      </h2>
+                      <span className="text-[10px] font-black text-purple-700 bg-purple-100 border border-purple-200 px-3 py-1 rounded-full">
+                        {data.flashcards?.length || 0} CARDS
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                       {data.flashcards.map((cardItem, idx) => (
                         <Flashcard key={idx} index={idx} question={cardItem.question} answer={cardItem.answer} />
                       ))}
