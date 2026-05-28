@@ -297,7 +297,6 @@ export default function Dashboard() {
     }
   };
 
-  // ── VISUAL NATIVE PDF PRINT ENGINE ──
   const handleDownloadPdfReport = () => {
     if (!data) return;
     setDownloadingPdf(true);
@@ -448,9 +447,7 @@ export default function Dashboard() {
       <div className="space-y-6">
         {Object.keys(pageMap).map((header, index) => {
           if (pageMap[header].length === 0) return null;
-          
           const flatTextSummary = pageMap[header].join(' ').replace(/\s+/g, ' ').trim();
-
           return (
             <div key={index} className="space-y-3">
               <span className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] px-4 py-2 rounded-xl border ${badgeColors[index % badgeColors.length]}`}>
@@ -496,7 +493,6 @@ export default function Dashboard() {
           </div>
           <h1 className="text-[18px] font-black text-slate-900 tracking-tight">Pagiverse</h1>
         </div>
-        {/* 📥 RE-ACTIVATED HIGH-END PDF DOWNLOAD reporting engine BUTTON */}
         {data && (
           <button
             onClick={handleDownloadPdfReport}
@@ -556,7 +552,7 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* 🗂️ RESTORED NAV CONTROLLER SLIDER (ADDED IN BETWEEN UPLOAD AND REPOSITORY) */}
+            {/* COLLAPSIBLE NAV LIST SLIDER */}
             {data && (
               <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                 <button
@@ -573,7 +569,13 @@ export default function Dashboard() {
                       return (
                         <button
                           key={key}
-                          onClick={() => setActiveTab(key)}
+                          onClick={() => {
+                            setActiveTab(key);
+                            // Smooth scroll setup to target exact segment bounds natively
+                            if (resultsRef.current) {
+                              resultsRef.current.scrollIntoView({ behavior: 'smooth' });
+                            }
+                          }}
                           className={`w-full text-left px-3.5 py-3 rounded-xl border transition-all flex items-center justify-between group ${
                             isActive
                               ? `${pal.bg} ${pal.border} shadow-sm font-black`
@@ -666,120 +668,84 @@ export default function Dashboard() {
 
         {/* ── RESULTS PANEL ── */}
         {data && !loading && (
-          <div ref={resultsRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] min-h-[620px]">
+          <div ref={resultsRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex-1">
+            {/* 🛠️ 100% CLEAN RESULTS CORE: Removed the duplicate tabs panel grid section to completely drop layout duplication */}
+            <div className="p-6 md:p-8 space-y-10 bg-white">
 
-              {/* SIDE NAVIGATION INTERACTION INSIDE CONTENT PANE */}
-              <aside className="bg-slate-50/60 border-r border-slate-100 p-3 space-y-1.5 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
-                {tabs.map(({ key, icon: Icon, label, sub, pal }) => {
-                  const isActive = activeTab === key;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setActiveTab(key)}
-                      className={`w-full text-left px-3.5 py-3 rounded-xl border transition-all flex items-center justify-between group ${
-                        isActive
-                          ? `${pal.bg} ${pal.border} shadow-sm font-black`
-                          : 'bg-white/60 border-transparent hover:bg-white hover:border-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Icon size={14} className={isActive ? pal.label : 'text-slate-400'} />
-                        <div className="truncate">
-                          <p className={`text-[11px] font-black tracking-tight truncate leading-tight ${isActive ? 'text-slate-900 font-black' : 'text-slate-600'}`}>{label}</p>
-                          <p className={`text-[9px] font-semibold truncate leading-tight mt-0.5 ${isActive ? 'text-slate-500' : 'text-slate-300'}`}>{sub}</p>
-                        </div>
+              {/* PAGE SUMMARIES */}
+              {activeTab === 'summary' && (
+                <section className="space-y-6 animate-fadeIn">
+                  {renderSummaryBlocks()}
+                </section>
+              )}
+
+              {/* DEEP INSIGHTS MATRIX */}
+              {activeTab === 'key_points' && data.key_points.length > 0 && (
+                <section className="space-y-4 animate-fadeIn">
+                  <div className="grid grid-cols-1 gap-3">
+                    {data.key_points.map((item, idx) => (
+                      <div key={idx} className="flex gap-4 p-4 bg-sky-50 border border-sky-200 border-l-4 border-l-sky-500 rounded-2xl">
+                        <span className="text-[11px] font-black text-sky-400 mt-0.5 shrink-0 w-6 text-right">{String(idx + 1).padStart(2, '0')}.</span>
+                        <p className="text-[14px] font-black text-slate-900 leading-relaxed">{item}</p>
                       </div>
-                      {key === 'flashcards' ? (
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full shrink-0 ml-1 ${pal.badge}`}>
-                          {data.flashcards?.length || 0}
-                        </span>
-                      ) : (
-                        <ChevronRight size={11} className={`shrink-0 transition-transform ${isActive ? pal.label : 'text-slate-200'} group-hover:translate-x-0.5`} />
-                      )}
-                    </button>
-                  );
-                })}
-              </aside>
-
-              {/* MAIN REFLUSH VIEWPORT */}
-              <main className="p-6 md:p-8 bg-white overflow-y-auto">
-
-                {/* PAGE SUMMARIES */}
-                {activeTab === 'summary' && (
-                  <div className="space-y-5">
-                    {renderSummaryBlocks()}
+                    ))}
                   </div>
-                )}
+                </section>
+              )}
 
-                {/* DEEP INSIGHTS MATRIX */}
-                {activeTab === 'key_points' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-3">
-                      {data.key_points.map((item, idx) => (
-                        <div key={idx} className="flex gap-4 p-4 bg-sky-50 border border-sky-200 border-l-4 border-l-sky-500 rounded-2xl">
-                          <span className="text-[11px] font-black text-sky-400 mt-0.5 shrink-0 w-6 text-right">{String(idx + 1).padStart(2, '0')}.</span>
-                          <p className="text-[14px] font-black text-slate-900 leading-relaxed">{item}</p>
-                        </div>
-                      ))}
-                    </div>
+              {/* TIMELINE */}
+              {activeTab === 'timeline' && data.timeline_dates.length > 0 && (
+                <section className="space-y-4 animate-fadeIn">
+                  <div className="border-l-2 border-amber-300 pl-5 ml-2 space-y-3 relative">
+                    {data.timeline_dates.map((dateEvent, idx) => (
+                      <div key={idx} className="relative p-4 bg-amber-50 border border-amber-200 border-l-4 border-l-amber-400 rounded-xl shadow-sm">
+                        <div className="absolute -left-[29px] top-4 w-3 h-3 rounded-full bg-amber-400 border-2 border-white shadow-sm" />
+                        <p className="text-[14px] font-black text-amber-950 leading-relaxed">{dateEvent}</p>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </section>
+              )}
 
-                {/* TIMELINE */}
-                {activeTab === 'timeline' && (
-                  <div className="space-y-4">
-                    <div className="border-l-2 border-amber-300 pl-5 ml-2 space-y-3 relative">
-                      {data.timeline_dates.map((dateEvent, idx) => (
-                        <div key={idx} className="relative p-4 bg-amber-50 border border-amber-200 border-l-4 border-l-amber-400 rounded-xl shadow-sm">
-                          <div className="absolute -left-[29px] top-4 w-3 h-3 rounded-full bg-amber-400 border-2 border-white shadow-sm" />
-                          <p className="text-[14px] font-black text-amber-950 leading-relaxed">{dateEvent}</p>
-                        </div>
-                      ))}
-                    </div>
+              {/* QUOTES / LAWS / ACTS */}
+              {activeTab === 'quotes' && data.historians_quotes.length > 0 && (
+                <section className="space-y-4 animate-fadeIn">
+                  <div className="grid grid-cols-1 gap-4">
+                    {data.historians_quotes.map((quoteText, idx) => (
+                      <div key={idx} className="relative p-5 bg-indigo-50 border border-indigo-200 border-l-4 border-l-indigo-500 rounded-2xl">
+                        <span className="absolute right-4 top-2 text-5xl font-serif text-indigo-200 select-none leading-none">"</span>
+                        <p className="text-[14px] font-black text-indigo-950 leading-relaxed pr-8">{quoteText}</p>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </section>
+              )}
 
-                {/* QUOTES / LAWS / ACTS */}
-                {activeTab === 'quotes' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4">
-                      {data.historians_quotes.map((quoteText, idx) => (
-                        <div key={idx} className="relative p-5 bg-indigo-50 border border-indigo-200 border-l-4 border-l-indigo-500 rounded-2xl">
-                          <span className="absolute right-4 top-2 text-5xl font-serif text-indigo-200 select-none leading-none">"</span>
-                          <p className="text-[14px] font-black text-indigo-950 leading-relaxed pr-8">{quoteText}</p>
-                        </div>
-                      ))}
-                    </div>
+              {/* CHEAT SHEET */}
+              {activeTab === 'cheat_sheet' && cheatSheetArray.length > 0 && (
+                <section className="space-y-4 animate-fadeIn">
+                  <div className="grid grid-cols-1 gap-3">
+                    {cheatSheetArray.map((point, idx) => (
+                      <div key={idx} className="flex gap-3 p-4 bg-rose-50 border border-rose-200 border-l-4 border-l-rose-500 rounded-2xl items-start">
+                        <span className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />
+                        <p className="text-[14px] font-black text-rose-950 leading-relaxed">{point}</p>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </section>
+              )}
 
-                {/* CHEAT SHEET */}
-                {activeTab === 'cheat_sheet' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-3">
-                      {cheatSheetArray.map((point, idx) => (
-                        <div key={idx} className="flex gap-3 p-4 bg-rose-50 border border-rose-200 border-l-4 border-l-rose-500 rounded-2xl items-start">
-                          <span className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />
-                          <p className="text-[14px] font-black text-rose-950 leading-relaxed">{point}</p>
-                        </div>
-                      ))}
-                    </div>
+              {/* FLASHCARDS */}
+              {activeTab === 'flashcards' && data.flashcards.length > 0 && (
+                <section className="space-y-5 animate-fadeIn">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {data.flashcards.map((cardItem, idx) => (
+                      <Flashcard key={idx} index={idx} question={cardItem.question} answer={cardItem.answer} />
+                    ))}
                   </div>
-                )}
+                </section>
+              )}
 
-                {/* FLASHCARDS */}
-                {activeTab === 'flashcards' && (
-                  <div className="space-y-5">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      {data.flashcards.map((cardItem, idx) => (
-                        <Flashcard key={idx} index={idx} question={cardItem.question} answer={cardItem.answer} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-              </main>
             </div>
           </div>
         )}
