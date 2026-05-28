@@ -3,6 +3,7 @@ import shutil
 import uuid
 import json
 import time
+import asyncio
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -28,30 +29,103 @@ app.add_middleware(
 
 os.makedirs("temp_uploads", exist_ok=True)
 
-def process_pdf_task(doc_id: str, file_path: str):
+# Helper function to asynchronously process individual chunk tasks
+async def process_single_chunk_async(chunk_text: str, chunk_index: int):
+    """
+    Wraps the AI insight generation service in an async thread loop 
+    to prevent blocking the central thread pool.
+    """
+    try:
+        print(f"--> Initializing Parallel Gemini Task for Chunk Node #{chunk_index + 1}")
+        # Running the synchronous generate_insights_from_ai function inside an isolated async executor thread
+        loop = asyncio.get_event_loop()
+        raw_insights = await loop.run_in_executor(None, services.generate_insights_from_ai, chunk_text)
+        
+        if isinstance(raw_insights, str):
+            try:
+                return json.loads(raw_insights.strip())
+            except Exception:
+                return {"summary": raw_insights}
+        return raw_insights if isinstance(raw_insights, dict) else {}
+    except Exception as chunk_err:
+        print(f"!!! Exception triggered inside Chunk Worker Node #{chunk_index + 1}: {str(chunk_err)}")
+        return {}
+
+async def process_pdf_task_async(doc_id: str, file_path: str):
     db = database.SessionLocal()
     try:
-        print(f"--- Asynchronous Processing Ingested for ID: {doc_id} ---")
-        text_data = services.extract_text_from_pdf(file_path)
-        insights = services.generate_insights_from_ai(text_data)
+        print(f"--- Asynchronous High-Performance Chunk Ingestion for ID: {doc_id} ---")
         
-        if isinstance(insights, str):
-            try:
-                insights = json.loads(insights.strip())
-            except Exception:
-                pass
+        # 1. Extract raw textual streams from target document binary data
+        full_text_data = services.extract_text_from_pdf(file_path)
+        
+        # 2. CHUNKING ENGINE LOGIC: Split long text blocks into smaller 5-page token constraints
+        # Splitting content using generic newline/page boundaries. 
+        # (If your services has a page iterator, you can optimize this chunk split)
+        paragraphs = full_text_data.split('\n')
+        chunks = []
+        current_chunk = []
+        current_word_count = 0
+        
+        for para in paragraphs:
+            current_chunk.append(para)
+            current_word_count += len(para.split())
+            # 1500 words limit matches roughly 4-5 text-dense book pages seamlessly
+            if current_word_count >= 1500:
+                chunks.append("\n".join(current_chunk))
+                current_chunk = []
+                current_word_count = 0
+        if current_chunk:
+            chunks.append("\n".join(current_chunk))
 
-        final_summary = insights.get("summary") if isinstance(insights, dict) else None
-        final_key_points = insights.get("key_points", []) if isinstance(insights, dict) else []
-        final_timeline_dates = insights.get("timeline_dates", []) if isinstance(insights, dict) else []
-        final_historians_quotes = insights.get("historians_quotes", []) if isinstance(insights, dict) else []
-        final_cheat_sheet = insights.get("cheat_sheet", []) if isinstance(insights, dict) else []
-        final_flashcards = insights.get("flashcards", []) if isinstance(insights, dict) else []
+        print(f"--- Document Vector divided dynamically into {len(chunks)} Chunks. Spawning Parallel AI Workers ---")
 
-        if not final_summary:
-            final_summary = "Processing block completed. Structural data isolated."
+        # 3. SEMAPHORE ENGINE CONCURRENCY: Run parallel execution blocks concurrently using asyncio
+        # Limit to 3 concurrent tasks to protect API rate limits (RPM) safely
+        semaphore = asyncio.Semaphore(3)
+        
+        async def bounded_chunk_worker(chunk_text, index):
+            async with semaphore:
+                return await process_single_chunk_async(chunk_text, index)
+                
+        tasks = [bounded_chunk_worker(chunk, idx) for idx, chunk in enumerate(chunks)]
+        insights_results = await asyncio.gather(*tasks)
 
-        print(f"--- AI Processing Finished. Spawning Fresh Database Commit for ID: {doc_id} ---")
+        # 4. MASTER ANALYSIS AGGREGATOR: Merge fragmented matrices securely back into single dataset fields
+        aggregated_summary_blocks = []
+        merged_key_points = []
+        merged_timeline_dates = []
+        merged_historians_quotes = []
+        merged_cheat_sheet = []
+        merged_flashcards = []
+
+        for idx, chunk_data in enumerate(insights_results):
+            if not chunk_data:
+                continue
+                
+            # Aggregate structural continuous textbook summaries
+            chunk_summary = chunk_data.get("summary")
+            if chunk_summary:
+                # Append labeled headers so frontend maps paragraph splits perfectly
+                aggregated_summary_blocks.append(f"### PAGE BLOCK {String(idx+1).padStart(2, '0')} INSIGHTS\n{chunk_summary.strip()}")
+            
+            # Extend lists elements safely
+            if isinstance(chunk_data.get("key_points"), list):
+                merged_key_points.extend(chunk_data["key_points"])
+            if isinstance(chunk_data.get("timeline_dates"), list):
+                merged_timeline_dates.extend(chunk_data["timeline_dates"])
+            if isinstance(chunk_data.get("historians_quotes"), list):
+                merged_historians_quotes.extend(chunk_data["historians_quotes"])
+            if isinstance(chunk_data.get("cheat_sheet"), list):
+                merged_cheat_sheet.extend(chunk_data["cheat_sheet"])
+            if isinstance(chunk_data.get("flashcards"), list):
+                merged_flashcards.extend(chunk_data["flashcards"])
+
+        final_summary_string = "\n\n".join(aggregated_summary_blocks)
+        if not final_summary_string:
+            final_summary_string = "Processing block completed. Structural data isolated."
+
+        print(f"--- AI Grid Sync Successful. Spawning Fresh Database Commit for ID: {doc_id} ---")
 
         # Network connection auto-recovery ping loop
         for retry in range(3):
@@ -60,17 +134,17 @@ def process_pdf_task(doc_id: str, file_path: str):
                 break
             except Exception:
                 db.close()
-                time.sleep(1.5)
+                await asyncio.sleep(1.5)
                 db = database.SessionLocal()
 
         analytics = models.Analytics(
             document_id=doc_id,
-            summary=str(final_summary).strip(),
-            key_points=json.dumps(final_key_points),
-            timeline_dates=json.dumps(final_timeline_dates),
-            historians_quotes=json.dumps(final_historians_quotes),
-            cheat_sheet=json.dumps(final_cheat_sheet),
-            flashcards=json.dumps(final_flashcards)
+            summary=str(final_summary_string).strip(),
+            key_points=json.dumps(merged_key_points),
+            timeline_dates=json.dumps(merged_timeline_dates),
+            historians_quotes=json.dumps(merged_historians_quotes),
+            cheat_sheet=json.dumps(merged_cheat_sheet),
+            flashcards=json.dumps(merged_flashcards)
         )
         db.add(analytics)
         
@@ -83,7 +157,7 @@ def process_pdf_task(doc_id: str, file_path: str):
             
     except Exception as e:
         db.rollback()
-        print(f"!!! Error in worker thread: {str(e)} !!!")
+        print(f"!!! Error in async worker core pipeline: {str(e)} !!!")
         try:
             db.close()
             db = database.SessionLocal()  
@@ -101,6 +175,10 @@ def process_pdf_task(doc_id: str, file_path: str):
                 print(f"--- Temporary cache cleanup successful: {file_path} ---")
             except:
                 pass
+
+def process_pdf_task(doc_id: str, file_path: str):
+    """Bridge interface matching older synchronous signature to fire async handler chain natively."""
+    asyncio.run(process_pdf_task_async(doc_id, file_path))
 
 @app.post("/upload", response_model=schemas.DocumentResponse)
 async def upload_pdf(background_tasks: BackgroundTasks, file: UploadFile = File(...), db: Session = Depends(database.get_db)):
