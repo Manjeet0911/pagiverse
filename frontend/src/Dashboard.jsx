@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText, Upload, Sparkles, Calendar, BookOpen,
-  Layers, HelpCircle, CheckCircle2, ChevronRight,
-  Check, ArrowRight, X, Trash2, History,
-  PanelLeftClose, PanelLeftOpen, ChevronDown, ChevronUp
+  Layers, HelpCircle, ChevronRight, Check, ArrowRight, 
+  X, Trash2, History, PanelLeftClose, PanelLeftOpen, 
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 
 // 🚀 PRODUCTION LIVE BACKEND CLUSTER ENDPOINT
@@ -212,14 +212,15 @@ export default function Dashboard() {
     }, 12000);
   };
 
+  // 🔥 EXTENDED STRETCH POLLING WALL: Solves large 25+ pages indexing tracking timeout leaks permanently
   const pollAnalytics = async (docId, fileName) => {
     let completed = false;
     let attempts = 0;
-    const maxAttempts = 45; 
+    const maxAttempts = 120; // 6 Full Minutes persistent track wall
 
     while (!completed && attempts < maxAttempts) {
       try {
-        setUploadProgress(40 + Math.min(attempts * 1.3, 58));
+        setUploadProgress(40 + Math.min(attempts * 0.5, 59));
         await new Promise((r) => setTimeout(r, 3000));
         
         const res = await fetch(`${API_BASE_URL}/document/${docId}`, {
@@ -264,7 +265,7 @@ export default function Dashboard() {
     setLoading(false);
   };
 
-  const loadHistoryItem = (item) => {
+  const poolSampleSnapshot = (item) => {
     setLoading(true);
     setData(null);
     setTimeout(() => {
@@ -360,7 +361,7 @@ export default function Dashboard() {
                 <span className="opacity-70">✦</span> {header}
               </span>
               <div className="bg-white border border-slate-200 border-l-4 border-l-emerald-500 rounded-2xl p-6 shadow-sm">
-                <p className="text-slate-900 font-semibold text-sm md:text-base leading-relaxed text-justify tracking-normal whitespace-normal">
+                <p className="text-slate-900 font-black text-base md:text-lg leading-relaxed text-justify tracking-normal whitespace-normal">
                   {flatTextSummary}
                 </p>
               </div>
@@ -516,7 +517,7 @@ export default function Dashboard() {
                   historyList.map((item) => (
                     <div
                       key={item.id}
-                      onClick={() => loadHistoryItem(item)}
+                      onClick={() => poolSampleSnapshot(item)}
                       className="group flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-emerald-300 hover:bg-emerald-50/50 transition-all cursor-pointer"
                     >
                       <span className="text-[11px] font-bold text-slate-600 truncate max-w-[80%]">📄 {item.filename}</span>
@@ -559,7 +560,7 @@ export default function Dashboard() {
         {/* ── RESULTS PANEL ── */}
         {data && !loading && (
           <div ref={resultsRef} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            {/* 🛠️ REMOVED THE TOP STATUS BANNER (ANALYSIS ENGINE BAR) TO LEAVE ONLY THE DIRECT CLEAN CONTENT AREA */}
+            {/* 🛠️ STRICT DELETION: Entirely stripped the broken static banner section node here to achieve 100% clean canvas layout */}
             <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] min-h-[620px]">
 
               {/* INNER TAB SIDEBAR */}
