@@ -59,11 +59,16 @@ def generate_insights_from_ai(text: str) -> Dict[str, Any]:
             pass
 
     system_instruction = """
-    You are an expert multi-disciplinary university professor. Your job is to strictly analyze the entire provided document chunk text at once and extract comprehensive, high-density academic data.
+    You are an expert multi-disciplinary university professor and native bilingual scholar. Your job is to strictly analyze the entire provided document chunk text at once and extract comprehensive, high-density academic data.
     
+    CRITICAL LANGUAGE SEPARATION RULE (ZERO-MIXING POLICY):
+    - DETECT THE DOMAIN LANGUAGE: Dynamic parsing pass to evaluate if the provided textbook input text is predominantly in Hindi (Devanagari Script) or English.
+    - IF THE INPUT IS HINDI: The ENTIRE JSON response values ("summary", "key_points", "timeline_dates", "historians_quotes", "cheat_sheet", and both "question" and "answer" inside "flashcards") MUST be generated in PURE DEVANAGARI HINDI (शुद्ध देवनागरी हिंदी). Do NOT use English alphabets, do NOT use Hinglish, and do NOT mix English characters inside Hindi strings. Translate technical terms into appropriate Hindi academic equivalents or transliterate them purely into Devnagari script (e.g., write 'एल्गोरिदम' instead of 'Algorithm', or 'ऑपरेटिंग सिस्टम' instead of 'Operating System').
+    - IF THE INPUT IS ENGLISH: Generate the entire payload values in pure English setup.
+
     CRITICAL STRUCTURE & OUTPUT DIRECTION:
     1. "summary" MUST contain individual, ultra-crisp summaries for EACH and EVERY page identified by the '--- PAGE X ---' markers in the text. 
-       You MUST strictly format each page's summary exactly with this header format:
+       You MUST strictly format each page's summary exactly with this header format (Keep headers in English markdown syntax like '### Page X Summary' so the frontend structural parser reads them, but the text content under it must strictly obey the Language Policy):
        ### Page X Summary
        [Then write an ultra-crisp, sharp 3-5 bullet points or lines containing the core concept of that specific page]
        
@@ -73,10 +78,15 @@ def generate_insights_from_ai(text: str) -> Dict[str, Any]:
     2. "key_points" MUST be high-density, context-heavy deeper insights. Do NOT repeat or paraphrase the core lines already written in the "summary" block. Extract micro-details, structural policies, causes, and foundational academic details.
     
     3. "timeline_dates" MUST be an array of strings. For every date, year, or range found, include the event context alongside it. 
-       Strict Format Example: "1848 - Doctrine of Lapse introduced with the annexation of Satara." Do NOT output isolated years.
+       Strict Format Example (English): "1848 - Doctrine of Lapse introduced with the annexation of Satara."
+       Strict Format Example (Hindi): "1848 - सतारा के विलय के साथ डॉक्ट्रिन ऑफ लैप्स की शुरुआत।"
+       Do NOT output isolated years.
        
     4. "historians_quotes" MUST be a single combined array grouping everything about who said what, book names, verbatim statements, acts, and text laws mentioned across the text.
-    5. Language Policy: If text is Hindi (Devanagari script), generate entirely in pure Devanagari Hindi setup. If English, pure English.
+    
+    5. "cheat_sheet" MUST be an array of high-yield, condensed reference points, core formulas, or high-weightage examination constants extracted from the text bounds.
+    
+    6. "flashcards" MUST be an array of structural objects containing explicit high-frequency 'question' and 'answer' pairs mapped directly from the academic core of the text.
     """
 
     response_schema = {
