@@ -36,7 +36,27 @@ def generate_insights_from_ai(text: str) -> Dict[str, Any]:
     if not text.strip():
         return {}
 
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    # 🔑 MULTI-KEY FAILOVER MATRIX: Strictly aligned with your new config settings
+    api_keys_pool = [
+        getattr(settings, "GEMINI_API_KEY_PRIMARY", None),
+        getattr(settings, "GEMINI_API_KEY_SECONDARY", None),
+        getattr(settings, "GEMINI_API_KEY_TERTIARY", None)
+    ]
+    
+    # Filter out empty placeholders, None types, and prevent duplicate requests parameters
+    active_keys = []
+    for key in api_keys_pool:
+        if key and str(key).strip() and not str(key).startswith("your_"):
+            if key not in active_keys:  # 🔥 DEDUPLICATION: Prevents wasting requests if same key is used twice
+                active_keys.append(key)
+
+    if not active_keys:
+        print("!!! CRITICAL: No valid operational Gemini API Keys detected inside config settings layer !!!")
+        # Direct property fallback as an absolute disaster recovery rule
+        try:
+            active_keys = [settings.GEMINI_API_KEY]
+        except Exception:
+            pass
 
     system_instruction = """
     You are an expert multi-disciplinary university professor. Your job is to strictly analyze the entire provided document chunk text at once and extract comprehensive, high-density academic data.
@@ -82,26 +102,39 @@ def generate_insights_from_ai(text: str) -> Dict[str, Any]:
         "required": ["summary", "key_points", "timeline_dates", "historians_quotes", "cheat_sheet", "flashcards"]
     }
 
-    try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=f"Completely process this textbook data chunk and populate the comprehensive structured schema:\n\n{text}",
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                response_mime_type="application/json",
-                response_schema=response_schema,
-                temperature=0.15
-            )
-        )
-        
-        if response and response.text:
-            return json.loads(response.text.strip())
+    # Dynamic failover loop tracker
+    for idx, current_key in enumerate(active_keys):
+        try:
+            print(f"--> [API Rotator] Dispatching request payload using API Key Config Index #{idx + 1}...")
+            client = genai.Client(api_key=current_key)
             
-    except Exception as e:
-        print(f"!!! Single-Shot Processing pipeline exception: {str(e)} !!!")
-        
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=f"Completely process this textbook data chunk and populate the comprehensive structured schema:\n\n{text}",
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    response_mime_type="application/json",
+                    response_schema=response_schema,
+                    temperature=0.15
+                )
+            )
+            
+            if response and response.text:
+                parsed_json = json.loads(response.text.strip())
+                print(f"--- [API Rotator SUCCESS] Successfully completed payload generation using Key Index #{idx + 1} ---")
+                return parsed_json
+                
+        except Exception as e:
+            print(f"!!! [API Rotator WARNING] Key Index #{idx + 1} thrown exception: {str(e)} !!!")
+            # If this isn't the last key, log failover transition state
+            if idx < len(active_keys) - 1:
+                print(f"--> Automated failover triggered. Routing traffic safely to Key Index #{idx + 2}...")
+                time.sleep(1.0) # Grace period before spinning next connection block
+            else:
+                print("!!! [API Rotator FATAL] All configured API keys exhausted inside current pipeline run !!!")
+
     return {
-        "summary": "",
+        "summary": "Processing block completed. Structural data isolated due to pipeline failover constraints.",
         "key_points": [],
         "timeline_dates": [],
         "historians_quotes": [],

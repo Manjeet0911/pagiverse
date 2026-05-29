@@ -1,8 +1,36 @@
-node_modules/
-frontend/node_modules/
-backend/pdf_companion.db
-backend/temp_uploads/
-backend/__pycache__/
-backend/app/__pycache__/
+# 🔑 PRIVATE ENVIRONMENT CONFIGURATIONS (SABSE ZAROORI)
 .env
+.env.*
+*.env
+**/.*.env
+**/.*.env.*
 backend/.env
+frontend/.env
+
+# 📦 DEPENDENCIES & PACKAGES
+node_modules/
+**/node_modules/
+.venv/
+venv/
+ENV/
+env/
+
+# 🐍 PYTHON RUNTIME CACHE & DUMPS
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# 💾 LOCAL DATABASES & BINARIES
+*.db
+*.sqlite3
+backend/pdf_companion.db
+
+# 📁 TEMPORARY UPLOADS & CACHE
+backend/temp_uploads/
+**/temp_uploads/
+temp_uploads/
+*.pdf
+*.log
