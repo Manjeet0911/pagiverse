@@ -41,7 +41,7 @@ The system is engineered for real-world academic workloads: documents with 24+ p
 | **Primary Use Case** | Academic PDF analysis and structured knowledge extraction |
 | **Supported Languages** | English, Hindi (Devanagari script), mixed-language documents |
 | **Document Target** | Textbook chapters, lecture notes, academic manuscripts (1–100+ pages) |
-| **AI Core** | Google Gemini API (Free Tier compatible) |
+| **AI Core** | Google Gemini API with Multi-Key Failover Architecture (Free Tier compatible) |
 | **Backend Runtime** | FastAPI on Python 3.11+, deployed via Gunicorn on Render |
 | **Frontend Runtime** | React 18 + Vite + Tailwind CSS v4 |
 | **Live API Endpoint** | `https://pagiverse.onrender.com` |
@@ -71,7 +71,7 @@ The diagram below shows the full request lifecycle — from a user uploading a P
 │     └─► Merge filter  (15–50 words → merge into next block)         │
 │     └─► Compact batch grouping  (~10 dense pages / batch)           │
 │     └─► asyncio.Semaphore(2)  concurrent worker pool                │
-│     └─► Gemini API  (2–3 requests per 24-page document)             │
+│     └─► Multi-Key API Rotator Pool (Dynamic Failover Switch on 503/429 errors)
 │     └─► JSON schema validation & storage                            │
 │                                                                     │
 │   GET /document/{id}         → status: pending | completed | failed │
@@ -116,7 +116,7 @@ The frontend automatically detects the document's subject domain from the extrac
 | Web Framework | FastAPI 0.110+ |
 | ASGI Server | Uvicorn / Gunicorn |
 | PDF Parsing | pypdf |
-| AI Core | Google GenAI SDK (`gemini-2.5-flash`) |
+| AI Core | Google GenAI SDK (Dynamic Multi-Key Rotation Matrix: gemini-2.5-flash) |
 | Concurrency | Python `asyncio` + `asyncio.Semaphore` |
 | Deployment | Render (Free Tier) |
 
@@ -313,7 +313,11 @@ pip install -r requirements.txt
 
 # 4. Configure environment variables
 # Create a .env file in the backend root and add:
-GEMINI_API_KEY=your_google_gemini_api_key_here
+DATABASE_URL=your_postgresql_database_url_here
+PROJECT_NAME=AI PDF Study Companion
+GEMINI_API_KEY_PRIMARY=your_primary_gemini_api_key_here
+GEMINI_API_KEY_SECONDARY=your_secondary_gemini_api_key_here
+GROQ_API_KEY=your_groq_api_key_here
 
 # 5. Start the development server
 uvicorn app.main:app --reload --port 8000
@@ -366,7 +370,7 @@ The FastAPI backend is deployed as a **Web Service** on Render's free tier.
 | :--- | :--- |
 | **Build Command** | `pip install -r requirements.txt` |
 | **Start Command** | `gunicorn app.main:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT` |
-| **Environment Variable** | `GEMINI_API_KEY` = your key |
+| **Environment Variable** | `GEMINI_API_KEY_PRIMARY, GEMINI_API_KEY_SECONDARY, GROQ_API_KEY` |
 | **Instance Type** | Free |
 
 ### Cold-Start Prevention — UptimeRobot
@@ -407,6 +411,7 @@ The table below documents every major engineering decision and bug resolution co
 | Frontend — PDF Export | Pop-up blocker dependencies and null array iteration caused export engine crashes | Fortified all six data arrays with explicit `Array.isArray()` conditional guards |
 | Frontend — Polling Cutoff | `maxAttempts: 25` caused a premature 9-page artifact cutoff for 24-page documents | Raised `maxAttempts` to `150` with an adjusted progress increment rate |
 | Infrastructure — Cold Start | Render free tier sleep caused 30–60s latency on the first request of each session | Registered instance with UptimeRobot at a 5-minute ping interval |
+| Backend — Infrastructure | API downtime or 503 high demand spikes caused pipeline exceptions | Implemented an Automated Multi-Key Failover Matrix with dynamic configuration properties to rotate keys on request failure |
 
 ---
 
@@ -414,7 +419,7 @@ The table below documents every major engineering decision and bug resolution co
 
 | Constraint | Detail |
 | :--- | :--- |
-| **Gemini Free Tier Quota** | 20 requests/day. The compact batching strategy keeps typical 24-page documents within 2–3 requests. Heavy single-day usage may approach the ceiling. |
+| **Gemini Free Tier Quota** | 20 requests/day per key. The compact batching strategy combined with the Multi-Key API Rotator pool seamlessly scales the availability ceiling past single-key restrictions. |
 | **Render Free Tier RAM** | 512MB. Documents exceeding ~150 pages may trigger memory pressure. Tested and stable up to 100 pages. |
 | **Concurrent Users** | `asyncio.Semaphore(2)` limits to 2 parallel Gemini calls. Additional uploads queue behind the semaphore and are processed sequentially. |
 | **PDF Type Support** | Text-layer PDFs only. Scanned image-based PDFs with no embedded text layer will produce empty extraction results unless local OCR is manually configured. |
